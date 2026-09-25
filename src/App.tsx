@@ -1,5 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Activity, CheckCircle2, XCircle, RefreshCw, Terminal, Server, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Terminal,
+  Server,
+  ShieldCheck,
+  Check,
+  Radio,
+} from 'lucide-react';
+import { getApiBaseUrl, fetchWithTimeout } from './config/api.ts';
 
 interface BackendHealth {
   status: string;
@@ -7,47 +18,56 @@ interface BackendHealth {
   backend: string;
 }
 
+type ConnectionStatus = 'checking' | 'connected' | 'offline';
+
 export default function App() {
   const [healthData, setHealthData] = useState<BackendHealth | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<string | null>(null);
 
   const checkBackendStatus = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setErrorDetails(null);
+
+    const baseUrl = getApiBaseUrl();
+    const endpoint = `${baseUrl}/api/health`;
+
     try {
-      // First try relative /api/health (served by Express backend)
-      // Fallback to direct localhost:8000/api/health if needed
-      let res: Response;
-      try {
-        res = await fetch('/api/health', {
-          headers: { Accept: 'application/json' },
-        });
-      } catch {
-        res = await fetch('http://localhost:8000/api/health', {
-          headers: { Accept: 'application/json' },
-        });
-      }
+      const res = await fetchWithTimeout(endpoint, {
+        headers: { Accept: 'application/json' },
+      });
 
       if (!res.ok) {
-        throw new Error(`HTTP error: ${res.status} ${res.statusText}`);
+        throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
       }
 
       const data: BackendHealth = await res.json();
       setHealthData(data);
-      setLastChecked(new Date().toLocaleTimeString());
+      setConnectionStatus('connected');
+      setErrorDetails(null);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to reach backend';
-      setError(message);
+      // Graceful fallback: do NOT crash the React app
+      let message = 'Unable to reach Python FastAPI backend';
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          message = 'Connection timed out while reaching FastAPI backend (port 8000)';
+        } else {
+          message = err.message;
+        }
+      }
       setHealthData(null);
-      setLastChecked(new Date().toLocaleTimeString());
+      setConnectionStatus('offline');
+      setErrorDetails(message);
     } finally {
       setLoading(false);
+      setLastChecked(new Date().toLocaleTimeString());
     }
   }, []);
 
   useEffect(() => {
+    // Check connection asynchronously after initial render
     checkBackendStatus();
   }, [checkBackendStatus]);
 
@@ -62,17 +82,21 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">FormatAI</h1>
-              <p className="text-xs text-slate-400 font-mono">Python FastAPI Backend</p>
+              <p className="text-xs text-slate-400 font-mono">Python + FastAPI Backend</p>
             </div>
           </div>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            v0.1.0 Architecture Init
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Check className="w-3.5 h-3.5" />
+              Frontend is running
+            </span>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-12 flex flex-col justify-center">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-10 flex flex-col justify-center">
+        {/* Banner Section */}
         <div className="text-center mb-10">
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-3">
             FormatAI
@@ -80,9 +104,15 @@ export default function App() {
           <p className="text-lg text-slate-400 max-w-xl mx-auto">
             AI-powered academic document formatting application
           </p>
-          <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-sm font-medium text-slate-300">
-            <Server className="w-4 h-4 text-emerald-400" />
-            <span>Python FastAPI Backend</span>
+          <div className="inline-flex flex-wrap items-center justify-center gap-2.5 mt-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-sm font-medium text-slate-300">
+              <Server className="w-4 h-4 text-indigo-400" />
+              <span>Python + FastAPI Backend</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-sm font-medium text-emerald-300">
+              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>Frontend is running</span>
+            </div>
           </div>
         </div>
 
@@ -95,7 +125,7 @@ export default function App() {
                 Backend Status
               </h3>
               <p className="text-sm text-slate-400 mt-1">
-                Live communication status with the Python FastAPI service
+                Real-time connection monitor for the Python FastAPI service
               </p>
             </div>
             <button
@@ -109,19 +139,21 @@ export default function App() {
           </div>
 
           <div className="mt-6">
-            {loading && !healthData && !error ? (
+            {connectionStatus === 'checking' && !healthData && (
               <div className="flex items-center justify-center py-10 text-slate-400 space-x-3">
                 <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
-                <span className="text-sm">Connecting to Python FastAPI backend...</span>
+                <span className="text-sm font-mono">Backend status: Checking...</span>
               </div>
-            ) : healthData ? (
+            )}
+
+            {connectionStatus === 'connected' && healthData && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                   <CheckCircle2 className="w-6 h-6 shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-white">FastAPI Backend Operational</h4>
+                    <h4 className="font-semibold text-white">Backend: Connected</h4>
                     <p className="text-xs text-emerald-300/80 mt-0.5">
-                      Successfully connected to Python service at <code className="font-mono bg-emerald-950/60 px-1 py-0.5 rounded">/api/health</code>
+                      Successfully reached Python FastAPI backend at <code className="font-mono bg-emerald-950/60 px-1 py-0.5 rounded">/api/health</code>
                     </p>
                   </div>
                 </div>
@@ -154,14 +186,16 @@ export default function App() {
                   </pre>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {connectionStatus === 'offline' && (
               <div className="space-y-4">
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
                   <XCircle className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-white">Backend Offline or Initializing</h4>
+                    <h4 className="font-semibold text-white">Backend: Offline</h4>
                     <p className="text-xs text-amber-200/80 mt-1">
-                      {error || 'Unable to connect to http://localhost:8000/api/health'}
+                      {errorDetails || 'Python FastAPI backend is offline or unreachable in this runtime.'}
                     </p>
                   </div>
                 </div>
@@ -169,11 +203,14 @@ export default function App() {
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300">
                   <div className="flex items-center gap-2 mb-2 font-semibold text-slate-200">
                     <Terminal className="w-4 h-4 text-indigo-400" />
-                    <span>Run backend command:</span>
+                    <span>Run backend locally (in Python environment):</span>
                   </div>
                   <code className="block bg-slate-900 p-3 rounded-lg font-mono text-indigo-300 border border-slate-800 select-all">
                     uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
                   </code>
+                  <p className="text-slate-400 text-xs mt-2">
+                    In AI Studio preview, the Node.js container runs the Vite React frontend. When running locally or deploying to a full-stack environment, run both services side-by-side.
+                  </p>
                 </div>
               </div>
             )}
@@ -194,7 +231,7 @@ export default function App() {
               Architecture
             </h4>
             <p className="text-xs text-slate-400 mt-1">
-              React + TypeScript frontend powered exclusively by Python FastAPI.
+              Independent React + TypeScript frontend with dedicated Python FastAPI backend.
             </p>
           </div>
           <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
@@ -203,7 +240,7 @@ export default function App() {
               FastAPI Engine
             </h4>
             <p className="text-xs text-slate-400 mt-1">
-              Pydantic-validated endpoints for health, formatting, and document export.
+              Pydantic-validated endpoints for health, document processing, and formatting.
             </p>
           </div>
           <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
