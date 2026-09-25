@@ -1,65 +1,57 @@
-"""FormatAI Backend Application.
+"""FormatAI FastAPI Application Entry Point.
 
-FastAPI entry point for FormatAI academic document formatting service.
+Clean, modular architecture orchestrating routes, services, providers,
+models, utilities, and configuration.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from backend.api.router import api_router
+from backend.core.config import get_settings
+from backend.models.health import RootResponse
+from backend.services.health_service import HealthService
+
+settings = get_settings()
 
 app = FastAPI(
-    title="FormatAI Backend",
-    description="Python FastAPI backend for FormatAI academic document formatting application.",
-    version="0.1.0",
+    title=settings.PROJECT_NAME,
+    description=settings.DESCRIPTION,
+    version=settings.VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-# Enable CORS for local frontend development
+# Configure CORS Middleware using safe settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
 
-class HealthResponse(BaseModel):
-    status: str
-    service: str
-    backend: str
+def get_health_service() -> HealthService:
+    """Dependency injector for HealthService."""
+    return HealthService()
 
 
-class RootResponse(BaseModel):
-    message: str
-    service: str
-    backend: str
-    docs_url: str
+@app.get("/", response_model=RootResponse, summary="Root endpoint")
+def read_root(service: HealthService = Depends(get_health_service)) -> RootResponse:
+    """Root endpoint confirming Python FastAPI backend operational status."""
+    return service.get_root_info()
 
 
-@app.get("/", response_model=RootResponse)
-def read_root():
-    """Root endpoint clearly indicating that the Python FastAPI backend is running."""
-    return RootResponse(
-        message="FormatAI Python FastAPI Backend is running.",
-        service="FormatAI",
-        backend="python",
-        docs_url="/docs",
-    )
-
-
-@app.get("/api/health", response_model=HealthResponse)
-def health_check():
-    """Health check endpoint returning backend status."""
-    return HealthResponse(
-        status="ok",
-        service="FormatAI",
-        backend="python",
-    )
+# Mount modular API router under /api
+app.include_router(api_router, prefix=settings.API_PREFIX)
 
 
 if __name__ == "__main__":
-    import os
     import uvicorn
 
-    port = int(os.environ.get("PORT", 8001))
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run(
+        "backend.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
+    )
