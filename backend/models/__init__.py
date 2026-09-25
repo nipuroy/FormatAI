@@ -1,7 +1,17 @@
 """Pydantic request and response schemas for FormatAI."""
 
 from .health import HealthResponse, RootResponse
-from .document import CitationStyle, DocumentFormat, FormattingRequestSkeleton
+from .document import (
+    BlockType,
+    CitationStyle,
+    DocumentBlock,
+    DocumentFormat,
+    DocumentStatistics,
+    AcademicDocument,
+    FormattingRequestSkeleton,
+    DocumentProcessResponse,
+    DocxExportRequest,
+)
 from .ai import AIGenerateRequest, AIGenerateResponse, AIErrorResponse
 
 __all__ = [
@@ -9,7 +19,13 @@ __all__ = [
     "RootResponse",
     "CitationStyle",
     "DocumentFormat",
+    "BlockType",
+    "DocumentBlock",
+    "DocumentStatistics",
+    "AcademicDocument",
     "FormattingRequestSkeleton",
+    "DocumentProcessResponse",
+    "DocxExportRequest",
     "AIGenerateRequest",
     "AIGenerateResponse",
     "AIErrorResponse",

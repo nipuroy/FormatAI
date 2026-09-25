@@ -25,6 +25,7 @@ from backend.models.document import (
 )
 from backend.services.content_cleanup_service import ContentCleanupService
 from backend.services.formatting_service import FormattingService
+from backend.utils.formatting import estimate_word_count, sanitize_filename
 from backend.utils.logger import get_logger
 from backend.utils.markdown import parse_raw_into_blocks
 from backend.utils.text_processing import (
@@ -32,8 +33,6 @@ from backend.utils.text_processing import (
     detect_citations,
     detect_math_expressions,
     detect_scientific_notation,
-    estimate_word_count,
-    sanitize_filename,
 )
 
 logger = get_logger("document_service")

@@ -10,6 +10,7 @@ Provides regex-based detection and normalization for:
 
 import re
 from typing import Any, Dict, List, Tuple
+from backend.utils.formatting import clean_text, estimate_word_count, sanitize_filename
 
 # =========================================================================
 # Academic Pattern Definitions
@@ -96,7 +97,7 @@ def detect_scientific_notation(text: str) -> List[str]:
 
 
 def detect_chemical_formulas(text: str) -> List[str]:
-    """Detect chemical formulas including LaTeX \ce{} or common chemical tokens."""
+    r"""Detect chemical formulas including LaTeX \ce{} or common chemical tokens."""
     formulas = []
 
     # LaTeX \ce{}
@@ -174,7 +175,7 @@ def normalize_typography(text: str) -> str:
 
     out = text
 
-    # Protect code blocks and math blocks from typography alteration
+    # Protect code blocks, math blocks, and table rows from typography alteration
     code_blocks: List[str] = []
     def _save_code(m):
         code_blocks.append(m.group(0))
@@ -184,6 +185,7 @@ def normalize_typography(text: str) -> str:
     out = re.sub(r"`[^`\n]+`", _save_code, out)
     out = re.sub(r"\$\$[\s\S]*?\$\$", _save_code, out)
     out = re.sub(r"\$[^\$\n]+\$", _save_code, out)
+    out = re.sub(r"^[ \t]*\|.*\|[ \t]*$", _save_code, out, flags=re.MULTILINE)
 
     # Replace double hyphens -- with en-dash – (especially for page numbers / number ranges)
     out = re.sub(r"(\d+)\s*--\s*(\d+)", r"\1–\2", out)

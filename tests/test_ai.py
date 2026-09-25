@@ -203,9 +203,9 @@ def test_security_never_leak_api_key():
 # 6. Unit Test for GeminiProvider with Injected Client
 # =========================================================================
 
-@pytest.mark.asyncio
-async def test_gemini_provider_unit_with_mock_client():
+def test_gemini_provider_unit_with_mock_client():
     """Verify GeminiProvider extraction logic using a duck-typed SDK client mock."""
+    import asyncio
     mock_client = MagicMock()
     mock_response = MagicMock()
     mock_response.text = "Generated text from mock Google GenAI client."
@@ -221,7 +221,7 @@ async def test_gemini_provider_unit_with_mock_client():
         client=mock_client,
     )
 
-    result = await provider.generate_text(prompt="Sample abstract")
+    result = asyncio.run(provider.generate_text(prompt="Sample abstract"))
     assert result.provider == "gemini"
     assert result.model == "gemini-2.5-flash"
     assert result.content == "Generated text from mock Google GenAI client."

@@ -91,19 +91,23 @@ class ContentCleanupService:
                 if not items:
                     continue
 
-                # Check if this "list" is actually a heading formatted as a bullet: `* **1. Abstract**`
+                # Check if this "list" is actually a heading formatted as a bullet: `* **1. Introduction**`
                 if len(items) == 1:
                     first_item = items[0].strip()
-                    heading_m = re.match(r"^\*\*(?:(\d+(?:\.\d+)*)\s+)?([A-Z][A-Za-z0-9\s:—\-]+)\*\*$", first_item)
-                    if heading_m:
-                        # Convert to heading
-                        level = 2 if heading_m.group(1) and "." in heading_m.group(1) else 1
-                        cleaned_blocks.append({
-                            "block_type": "heading",
-                            "level": level,
-                            "text": f"{heading_m.group(1) + ' ' if heading_m.group(1) else ''}{heading_m.group(2).strip()}",
-                        })
-                        continue
+                    bold_m = re.match(r"^\*\*(.+?)\*\*$", first_item)
+                    if bold_m:
+                        inner = bold_m.group(1).strip()
+                        if len(inner) < 80 and (
+                            re.match(r"^\d+(?:\.\d+)*\.?\s+[A-Z]", inner)
+                            or not inner.endswith((".", "?", "!"))
+                        ):
+                            # Convert to heading
+                            cleaned_blocks.append({
+                                "block_type": "heading",
+                                "level": 2,
+                                "text": inner,
+                            })
+                            continue
 
                 cleaned_blocks.append(block)
                 continue

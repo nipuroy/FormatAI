@@ -13,5 +13,6 @@ api_router.include_router(health_router, prefix="")
 # Mount AI generation routes under /api/ai
 api_router.include_router(ai_router)
 
-# Mount Document processing routes under /api/document
-api_router.include_router(document_router)
+# Mount Document processing and DOCX export routes under /api/documents and /api/document
+api_router.include_router(document_router, prefix="/documents")
+api_router.include_router(document_router, prefix="/document")

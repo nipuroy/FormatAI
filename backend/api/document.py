@@ -1,20 +1,31 @@
-"""Document processing pipeline routes."""
+"""Document processing and professional DOCX export routes."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from backend.models.document import (
+    AcademicDocument,
     DocumentProcessResponse,
+    DocxExportRequest,
     FormattingRequestSkeleton,
 )
 from backend.services.document_service import DocumentService
+from backend.services.docx_service import DocxService
+from backend.utils.formatting import sanitize_filename
 from backend.utils.logger import get_logger
 
-router = APIRouter(prefix="/document", tags=["Document Processing"])
+router = APIRouter(tags=["Document Processing & Export"])
 logger = get_logger("document_route")
+
+DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 def get_document_service() -> DocumentService:
     """Dependency injector providing DocumentService instance."""
     return DocumentService()
+
+
+def get_docx_service() -> DocxService:
+    """Dependency injector providing DocxService instance."""
+    return DocxService()
 
 
 @router.post(
@@ -49,4 +60,77 @@ def process_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process document through academic pipeline.",
+        )
+
+
+@router.post(
+    "/docx",
+    summary="Export structured document to genuine Microsoft Word (.docx) file",
+    responses={
+        200: {
+            "content": {DOCX_MIME_TYPE: {}},
+            "description": "Valid Microsoft Word DOCX binary file attachment",
+        },
+        400: {"description": "Invalid document or payload structure"},
+    },
+)
+def export_docx(
+    request: DocxExportRequest,
+    doc_service: DocumentService = Depends(get_document_service),
+    docx_service: DocxService = Depends(get_docx_service),
+) -> Response:
+    """Converts either a structured AcademicDocument or raw text into a valid,
+
+    editable Microsoft Word .docx file using professional typography and presets.
+    """
+    try:
+        # Resolve target document model
+        if request.document:
+            academic_doc = request.document
+        elif request.raw_text:
+            academic_doc = doc_service.process_document(
+                FormattingRequestSkeleton(
+                    raw_text=request.raw_text,
+                    title=request.title,
+                    citation_style=request.citation_style or "apa",
+                )
+            )
+        else:
+            raise ValueError("Either structured 'document' or 'raw_text' must be provided in request payload.")
+
+        # Generate genuine DOCX binary archive
+        docx_bytes = docx_service.generate_docx(
+            document=academic_doc,
+            preset=request.preset,
+            title_override=request.title,
+            include_page_numbers=request.include_page_numbers,
+            include_header=request.include_header,
+        )
+
+        raw_title = request.title or academic_doc.title or "academic_document"
+        clean_name = sanitize_filename(raw_title)
+        filename = f"{clean_name}.docx"
+
+        logger.info(f"Returning DOCX file attachment: '{filename}' ({len(docx_bytes)} bytes)")
+
+        return Response(
+            content=docx_bytes,
+            media_type=DOCX_MIME_TYPE,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": DOCX_MIME_TYPE,
+                "Content-Length": str(len(docx_bytes)),
+            },
+        )
+    except ValueError as ve:
+        logger.warning(f"DOCX export validation error: {str(ve)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+    except Exception as exc:
+        logger.error(f"Failed to generate DOCX file: {str(exc)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate DOCX document: {str(exc)}",
         )
