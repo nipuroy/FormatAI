@@ -145,3 +145,44 @@ class PdfExportRequest(BaseModel):
     include_page_numbers: Optional[bool] = Field(default=True, description="Include dynamic page numbers in footer")
     include_header: Optional[bool] = Field(default=True, description="Include running header")
 
+
+class ContentAnalysisRequest(BaseModel):
+    """Payload schema for analyzing unformatted document text."""
+
+    raw_text: str = Field(..., description="Raw academic text to analyze")
+
+
+class ContentAnalysisResponse(BaseModel):
+    """Structured response detailing detected academic elements and metrics."""
+
+    success: bool = True
+    word_count: int
+    char_count: int
+    line_count: int
+    estimated_read_time_minutes: float
+    detected_citations_count: int
+    detected_math_count: int
+    detected_chemicals_count: int
+    detected_scientific_count: int
+    heading_count: int
+    has_ai_conversational_chatter: bool
+    summary: str
+
+
+class ContentCleanRequest(BaseModel):
+    """Payload schema for cleaning conversational AI artifacts and noise."""
+
+    raw_text: str = Field(..., description="Raw academic text with potential AI conversational noise")
+
+
+class ContentCleanResponse(BaseModel):
+    """Result of content cleanup operation."""
+
+    success: bool = True
+    cleaned_text: str
+    original_char_count: int
+    cleaned_char_count: int
+    artifacts_removed: int
+    changes_applied: List[str]
+    message: str
+

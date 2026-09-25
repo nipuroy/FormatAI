@@ -12,6 +12,10 @@ from .document import (
     DocumentProcessResponse,
     DocxExportRequest,
     PdfExportRequest,
+    ContentAnalysisRequest,
+    ContentAnalysisResponse,
+    ContentCleanRequest,
+    ContentCleanResponse,
 )
 from .ai import AIGenerateRequest, AIGenerateResponse, AIErrorResponse
 
@@ -28,6 +32,10 @@ __all__ = [
     "DocumentProcessResponse",
     "DocxExportRequest",
     "PdfExportRequest",
+    "ContentAnalysisRequest",
+    "ContentAnalysisResponse",
+    "ContentCleanRequest",
+    "ContentCleanResponse",
     "AIGenerateRequest",
     "AIGenerateResponse",
     "AIErrorResponse",

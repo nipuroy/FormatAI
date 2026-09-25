@@ -59,3 +59,39 @@ async def generate_text(
                 provider="gemini",
             ).model_dump(),
         )
+
+
+@router.get(
+    "/models",
+    summary="Get available AI provider models and configuration status",
+)
+def get_available_models(
+    service: AIService = Depends(get_ai_service),
+):
+    """Returns supported Gemini models and provider readiness."""
+    is_configured = service.provider.is_configured() if hasattr(service.provider, "is_configured") else True
+    return {
+        "provider": "gemini",
+        "default_model": "gemini-2.5-flash",
+        "is_configured": is_configured,
+        "models": [
+            {
+                "id": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash",
+                "description": "Recommended for high-speed academic formatting, LaTeX extraction, and synthesis",
+                "tier": "Fast",
+            },
+            {
+                "id": "gemini-2.5-pro",
+                "name": "Gemini 2.5 Pro",
+                "description": "Advanced reasoning for dense mathematical derivations and rigorous citations",
+                "tier": "Pro",
+            },
+            {
+                "id": "gemini-1.5-flash",
+                "name": "Gemini 1.5 Flash",
+                "description": "Standard high-throughput model",
+                "tier": "Standard",
+            },
+        ],
+    }

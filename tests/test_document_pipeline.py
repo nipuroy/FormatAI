@@ -361,3 +361,47 @@ def test_api_document_process_endpoint():
     assert len(doc["blocks"]) >= 2
     assert len(doc["references"]) >= 1
     assert doc["statistics"]["word_count"] > 0
+
+
+def test_api_document_analyze_endpoint():
+    """Verify POST /api/documents/analyze scans metrics, headings, formulas, and chatter."""
+    payload = {
+        "raw_text": "Sure! Here is the text:\n\n# Quantum Chromodynamics\n\nIn field theory, $E=mc^2$ and $H\\psi = E\\psi$.\n\nIn 8/10 trials, results matched.\n\nHope this helps!",
+    }
+    response = client.post("/api/documents/analyze", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is True
+    assert data["word_count"] > 0
+    assert data["detected_math_count"] >= 1
+    assert data["has_ai_conversational_chatter"] is True
+    assert data["heading_count"] == 1
+
+
+def test_api_document_clean_endpoint():
+    """Verify POST /api/documents/clean sanitizes conversational intros and outros."""
+    payload = {
+        "raw_text": "Sure! Here is the text:\n\n# Quantum Chromodynamics\n\nPure physics content.\n\nHope this helps!",
+    }
+    response = client.post("/api/documents/clean", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is True
+    assert "Sure! Here is" not in data["cleaned_text"]
+    assert "Hope this helps" not in data["cleaned_text"]
+    assert "Quantum Chromodynamics" in data["cleaned_text"]
+    assert data["artifacts_removed"] > 0
+
+
+def test_api_ai_models_endpoint():
+    """Verify GET /api/ai/models returns list of supported Gemini models."""
+    response = client.get("/api/ai/models")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["provider"] == "gemini"
+    assert len(data["models"]) >= 2
+    model_ids = [m["id"] for m in data["models"]]
+    assert "gemini-2.5-flash" in model_ids

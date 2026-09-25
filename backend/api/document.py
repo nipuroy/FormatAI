@@ -7,12 +7,28 @@ from backend.models.document import (
     DocxExportRequest,
     PdfExportRequest,
     FormattingRequestSkeleton,
+    ContentAnalysisRequest,
+    ContentAnalysisResponse,
+    ContentCleanRequest,
+    ContentCleanResponse,
 )
 from backend.services.document_service import DocumentService
 from backend.services.docx_service import DocxService
 from backend.services.pdf_service import PdfService
-from backend.utils.formatting import sanitize_filename
+from backend.services.content_cleanup_service import (
+    ContentCleanupService,
+    AI_CHAT_PREFIXES,
+    AI_CHAT_SUFFIXES,
+)
+from backend.utils.formatting import sanitize_filename, estimate_word_count
+from backend.utils.text_processing import (
+    detect_citations,
+    detect_math_expressions,
+    detect_chemical_formulas,
+    detect_scientific_notation,
+)
 from backend.utils.logger import get_logger
+import re
 
 router = APIRouter(tags=["Document Processing & Export"])
 logger = get_logger("document_route")
@@ -34,6 +50,96 @@ def get_docx_service() -> DocxService:
 def get_pdf_service() -> PdfService:
     """Dependency injector providing PdfService instance."""
     return PdfService()
+
+
+def get_cleanup_service() -> ContentCleanupService:
+    """Dependency injector providing ContentCleanupService instance."""
+    return ContentCleanupService()
+
+
+@router.post(
+    "/analyze",
+    response_model=ContentAnalysisResponse,
+    summary="Analyze unformatted text structure, citations, formulas, and conversational noise",
+)
+def analyze_document(request: ContentAnalysisRequest) -> ContentAnalysisResponse:
+    """Examines raw text and returns comprehensive academic metrics and structural insights."""
+    text = request.raw_text or ""
+    words = estimate_word_count(text)
+    chars = len(text)
+    lines = len(text.splitlines())
+    read_time = round(words / 220.0, 1)
+
+    citations = detect_citations(text)
+    math_exprs = detect_math_expressions(text)
+    chemicals = detect_chemical_formulas(text)
+    scientific = detect_scientific_notation(text)
+
+    # Count Markdown headings (#, ##, ###, etc.)
+    heading_count = len(re.findall(r"(?m)^#{1,6}\s+.+$", text))
+
+    has_prefix = any(re.search(pat, text, flags=re.IGNORECASE) for pat in AI_CHAT_PREFIXES)
+    has_suffix = any(re.search(pat, text, flags=re.IGNORECASE) for pat in AI_CHAT_SUFFIXES)
+    has_chatter = has_prefix or has_suffix
+
+    summary_parts = [
+        f"{words} words across {lines} lines (~{read_time} min read)",
+        f"{heading_count} structural headings",
+    ]
+    if math_exprs:
+        summary_parts.append(f"{len(math_exprs)} mathematical expressions")
+    if citations:
+        summary_parts.append(f"{len(citations)} citations")
+    if chemicals:
+        summary_parts.append(f"{len(chemicals)} chemical formulas")
+    if has_chatter:
+        summary_parts.append("conversational AI artifacts detected")
+
+    return ContentAnalysisResponse(
+        success=True,
+        word_count=words,
+        char_count=chars,
+        line_count=lines,
+        estimated_read_time_minutes=read_time,
+        detected_citations_count=len(citations),
+        detected_math_count=len(math_exprs),
+        detected_chemicals_count=len(chemicals),
+        detected_scientific_count=len(scientific),
+        heading_count=heading_count,
+        has_ai_conversational_chatter=has_chatter,
+        summary="; ".join(summary_parts),
+    )
+
+
+@router.post(
+    "/clean",
+    response_model=ContentCleanResponse,
+    summary="Clean conversational AI preambles, signoffs, and formatting artifacts",
+)
+def clean_document(
+    request: ContentCleanRequest,
+    cleanup_service: ContentCleanupService = Depends(get_cleanup_service),
+) -> ContentCleanResponse:
+    """Strips conversational noise while strictly preserving academic content."""
+    original_text = request.raw_text or ""
+    cleaned = cleanup_service.clean_raw_content(original_text)
+
+    changes: List[str] = []
+    if len(cleaned) < len(original_text):
+        diff = len(original_text) - len(cleaned)
+        changes.append(f"Removed {diff} characters of conversational intros/outros")
+    else:
+        changes.append("No conversational intros/outros detected; text is clean")
+
+    return ContentCleanResponse(
+        success=True,
+        cleaned_text=cleaned,
+        original_char_count=len(original_text),
+        cleaned_char_count=len(cleaned),
+        artifacts_removed=max(0, len(original_text) - len(cleaned)),
+        changes_applied=changes,
+        message="Content successfully sanitized of conversational artifacts.",
+    )
 
 
 @router.post(
