@@ -1,4 +1,4 @@
-"""Tests for FormatAI dedicated mathematics-processing pipeline.
+r"""Tests for FormatAI dedicated mathematics-processing pipeline.
 
 Verifies:
 - Raw text -> Math detection -> Delimiter normalization -> LaTeX normalization -> MathML/OMML representation -> DOCX output
@@ -32,14 +32,14 @@ from backend.utils.omml_converter import mathml_to_omml
 # =========================================================================
 
 def test_delimiter_normalization():
-    """Verify \(...\) and \[...\] are normalized to $ and $$ while leaving prose slashes untouched."""
+    r"""Verify \(...\) and \[...\] are normalized to $ and $$ while leaving prose slashes untouched."""
     ms = MathService()
 
     raw = r"In physics, \(E = mc^2\) and \[H\psi = E\psi\] describe energy. Exactly 5/10 students passed."
     normalized = ms.normalize_delimiters(raw)
 
     assert "$E = mc^2$" in normalized
-    assert "$$H\psi = E\psi$$" in normalized
+    assert r"$$H\psi = E\psi$$" in normalized
     assert "5/10 students" in normalized  # Slashes in ordinary text must remain unaltered
 
 
@@ -100,7 +100,7 @@ def test_fractions_and_nested_fractions():
 
 
 def test_superscripts_and_subscripts():
-    """Verify subscript x_i, superscript x^2, and sub-superscript \sigma^2 or x_i^2."""
+    r"""Verify subscript x_i, superscript x^2, and sub-superscript \sigma^2 or x_i^2."""
     ms = MathService()
 
     # Subscript: x_i
@@ -120,7 +120,7 @@ def test_superscripts_and_subscripts():
 
 
 def test_roots_and_nth_roots():
-    """Verify square roots \sqrt{x} and nth roots \sqrt[3]{x+1}."""
+    r"""Verify square roots \sqrt{x} and nth roots \sqrt[3]{x+1}."""
     ms = MathService()
 
     # Square root

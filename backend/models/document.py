@@ -133,3 +133,15 @@ class DocxExportRequest(BaseModel):
     include_page_numbers: Optional[bool] = Field(default=True, description="Include dynamic Word page numbers in footer")
     include_header: Optional[bool] = Field(default=True, description="Include running header")
 
+
+class PdfExportRequest(BaseModel):
+    """Payload schema for requesting a professional PDF export."""
+
+    document: Optional[AcademicDocument] = Field(default=None, description="Pre-structured AcademicDocument AST")
+    raw_text: Optional[str] = Field(default=None, description="Raw unformatted text to parse and convert on-the-fly")
+    preset: Optional[str] = Field(default="academic", description="Layout preset: academic, research_paper, exam, study_notes, textbook")
+    title: Optional[str] = Field(default=None, description="Document title override")
+    citation_style: Optional[CitationStyle] = Field(default=CitationStyle.APA, description="Citation style standard")
+    include_page_numbers: Optional[bool] = Field(default=True, description="Include dynamic page numbers in footer")
+    include_header: Optional[bool] = Field(default=True, description="Include running header")
+

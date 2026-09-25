@@ -1,4 +1,4 @@
-"""Dedicated Mathematics Processing Pipeline Service for FormatAI.
+r"""Dedicated Mathematics Processing Pipeline Service for FormatAI.
 
 Pipeline Architecture:
 Raw text
@@ -97,7 +97,7 @@ class MathService:
     # -------------------------------------------------------------------------
 
     def normalize_delimiters(self, text: str) -> str:
-        """Standardize various LaTeX math delimiters to uniform $ and $$ markers.
+        r"""Standardize various LaTeX math delimiters to uniform $ and $$ markers.
 
         - Converts \( ... \) to $ ... $
         - Converts \[ ... \] to $$ ... $$
@@ -121,7 +121,7 @@ class MathService:
     # -------------------------------------------------------------------------
 
     def normalize_latex(self, latex_str: str) -> str:
-        """Clean and normalize LaTeX math strings for reliable AST generation.
+        r"""Clean and normalize LaTeX math strings for reliable AST generation.
 
         - Strips enclosing $ or $$ delimiters
         - Replaces informal multiplication 'x' or 'X' in scientific notation with \times

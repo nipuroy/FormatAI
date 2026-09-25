@@ -11,6 +11,7 @@ from .document import (
     FormattingRequestSkeleton,
     DocumentProcessResponse,
     DocxExportRequest,
+    PdfExportRequest,
 )
 from .ai import AIGenerateRequest, AIGenerateResponse, AIErrorResponse
 
@@ -26,6 +27,7 @@ __all__ = [
     "FormattingRequestSkeleton",
     "DocumentProcessResponse",
     "DocxExportRequest",
+    "PdfExportRequest",
     "AIGenerateRequest",
     "AIGenerateResponse",
     "AIErrorResponse",
