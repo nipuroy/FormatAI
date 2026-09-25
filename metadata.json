@@ -1,0 +1,6 @@
+{
+  "name": "FormatAI",
+  "description": "AI-powered academic document formatting application transforming unformatted AI text into professionally structured academic DOCX documents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
