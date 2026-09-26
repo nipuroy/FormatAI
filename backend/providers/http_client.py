@@ -102,6 +102,25 @@ async def execute_with_retry(
                 details={"timeout": timeout},
             )
         except (httpx.ConnectError, httpx.NetworkError) as exc:
+            is_local = "localhost" in url or "127.0.0.1" in url or "0.0.0.0" in url
+            # Do not retry connection refused or local addresses where no server is listening
+            if isinstance(exc, httpx.ConnectError) or is_local:
+                if is_local:
+                    raise ProviderNetworkError(
+                        message=(
+                            f"Unable to connect to local endpoint at {url}. "
+                            "When running in a cloud environment, FormatAI cannot reach your local machine's 'localhost' directly. "
+                            "Please provide a publicly reachable tunnel URL (e.g. ngrok, Cloudflare Tunnel) or select a cloud provider."
+                        ),
+                        provider=provider_name,
+                        details={"url": url, "error": str(exc)},
+                    )
+                raise ProviderNetworkError(
+                    message=f"Connection refused to {provider_name} at {url}. Verify the server is running and reachable.",
+                    provider=provider_name,
+                    details={"url": url, "error": str(exc)},
+                )
+
             if attempt <= max_retries:
                 logger.warning(f"Network error on {provider_name} (attempt {attempt}): {str(exc)}. Retrying...")
                 await asyncio.sleep(backoff)

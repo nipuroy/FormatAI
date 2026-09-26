@@ -88,7 +88,29 @@ class GeminiProvider(BaseAIProvider):
     def resolve_model(self, requested_model: Optional[str] = None) -> str:
         """Resolve requested model or fall back to configured default."""
         if requested_model and requested_model.strip():
-            return requested_model.strip()
+            clean = requested_model.strip()
+            # Guard against foreign model identifiers being passed to Gemini
+            if any(
+                foreign in clean.lower()
+                for foreign in [
+                    "llama",
+                    "mistral",
+                    "codestral",
+                    "gpt",
+                    "o1",
+                    "o3",
+                    "claude",
+                    "command",
+                    "deepseek",
+                    "qwen",
+                    "phi",
+                ]
+            ):
+                logger.warning(
+                    f"Model '{clean}' is incompatible with Google Gemini. Resolving to default '{self.default_model or DEFAULT_GEMINI_MODEL}'."
+                )
+                return self.default_model or DEFAULT_GEMINI_MODEL
+            return clean
         return self.default_model or DEFAULT_GEMINI_MODEL
 
     def _get_client(self) -> Any:

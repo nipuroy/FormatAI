@@ -85,34 +85,41 @@ export function AISettingsModal({
   // Active provider config helper
   const activeConfig: LocalProviderConfig = configs[selectedProviderId] || {
     apiKey: '',
-    baseUrl: selectedProviderId === 'custom_openai' ? 'http://localhost:11434/v1' : '',
+    baseUrl: '',
     enabled: true,
     selectedModel: '',
     timeoutSeconds: 30,
   };
 
+  const updateProviderConfig = useCallback(
+    (providerId: string, updates: Partial<LocalProviderConfig>) => {
+      setConfigs((prev) => {
+        const next = {
+          ...prev,
+          [providerId]: {
+            ...(prev[providerId] || {
+              apiKey: '',
+              baseUrl: '',
+              enabled: true,
+              selectedModel: '',
+              timeoutSeconds: 30,
+            }),
+            ...updates,
+          },
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // ignore storage errors
+        }
+        return next;
+      });
+    },
+    []
+  );
+
   const updateActiveConfig = (updates: Partial<LocalProviderConfig>) => {
-    setConfigs((prev) => {
-      const next = {
-        ...prev,
-        [selectedProviderId]: {
-          ...(prev[selectedProviderId] || {
-            apiKey: '',
-            baseUrl: selectedProviderId === 'custom_openai' ? 'http://localhost:11434/v1' : '',
-            enabled: true,
-            selectedModel: '',
-            timeoutSeconds: 30,
-          }),
-          ...updates,
-        },
-      };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
+    updateProviderConfig(selectedProviderId, updates);
   };
 
   // Load supported providers on open
@@ -149,18 +156,20 @@ export function AISettingsModal({
     try {
       const result = await apiClient.getProviderModels(providerId);
       setModels(result);
-      // Auto-select default model if none selected yet
-      const current = configs[providerId]?.selectedModel;
-      if (!current && result.length > 0) {
+
+      // Validate that currently stored model belongs to this provider
+      const storedModel = configs[providerId]?.selectedModel;
+      const isValid = result.some((m) => m.id === storedModel);
+      if (!isValid && result.length > 0) {
         const def = result.find((m) => m.is_default) || result[0];
-        updateActiveConfig({ selectedModel: def.id });
+        updateProviderConfig(providerId, { selectedModel: def.id });
       }
     } catch {
       setModels([]);
     } finally {
       setIsLoadingModels(false);
     }
-  }, [configs]);
+  }, [configs, updateProviderConfig]);
 
   useEffect(() => {
     if (isOpen && selectedProviderId) {
@@ -206,6 +215,11 @@ export function AISettingsModal({
       return;
     }
 
+    if (selectedProviderId === 'custom_openai' && !activeConfig.baseUrl?.trim()) {
+      setErrorMsg('Please specify an endpoint Base URL for Custom OpenAI (e.g. https://your-server-or-tunnel/v1).');
+      return;
+    }
+
     if (!activeConfig.enabled) {
       setErrorMsg(`Provider '${selectedProviderId}' is currently disabled. Please enable it before sending requests.`);
       return;
@@ -215,6 +229,12 @@ export function AISettingsModal({
     setErrorMsg(null);
     setGenerationResponse(null);
 
+    // Safeguard: Ensure model belongs to the selected provider
+    const isModelValid = models.some((m) => m.id === activeConfig.selectedModel);
+    const targetModel = isModelValid
+      ? activeConfig.selectedModel
+      : (models.find((m) => m.is_default)?.id || models[0]?.id || selectedProviderMeta?.default_model);
+
     const fullPrompt = activePrompt
       ? `${activePrompt}\n\nContext document:\n${currentText.slice(0, 10000)}`
       : `Please refine and structure this academic text according to high-standard research publication conventions:\n\n${currentText.slice(0, 10000)}`;
@@ -223,14 +243,14 @@ export function AISettingsModal({
       const res = await apiClient.generateAI({
         prompt: fullPrompt,
         provider: selectedProviderId,
-        model: activeConfig.selectedModel || undefined,
+        model: targetModel,
         temperature,
         timeout: activeConfig.timeoutSeconds || 30,
         provider_config: {
           api_key: activeConfig.apiKey || undefined,
           base_url: activeConfig.baseUrl || undefined,
           enabled: activeConfig.enabled,
-          default_model: activeConfig.selectedModel || undefined,
+          default_model: targetModel,
           timeout_seconds: activeConfig.timeoutSeconds || 30,
         },
         fallback_providers: fallbackProviderId ? [fallbackProviderId] : undefined,
@@ -431,14 +451,20 @@ export function AISettingsModal({
                     type="text"
                     value={activeConfig.baseUrl}
                     onChange={(e) => updateActiveConfig({ baseUrl: e.target.value })}
-                    placeholder={selectedProviderId === 'custom_openai' ? 'http://localhost:11434/v1' : 'Default API URL'}
+                    placeholder={selectedProviderId === 'custom_openai' ? 'https://xxxx.ngrok-free.app/v1 or http://host:11434/v1' : 'Default API URL'}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    {selectedProviderId === 'custom_openai'
-                      ? 'Point to Ollama, LM Studio, vLLM, or internal gateway.'
-                      : 'Leave blank to use standard official endpoint.'}
-                  </p>
+                  {selectedProviderId === 'custom_openai' && (activeConfig.baseUrl.includes('localhost') || activeConfig.baseUrl.includes('127.0.0.1')) ? (
+                    <p className="text-[10px] text-amber-700 mt-1 p-1.5 bg-amber-50 rounded border border-amber-200 leading-tight">
+                      <strong>Cloud note:</strong> This application runs in the cloud. Accessing a local Ollama or LM Studio model requires a public tunnel (e.g. ngrok or Cloudflare tunnel).
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {selectedProviderId === 'custom_openai'
+                        ? 'Point to your Ollama, LM Studio, vLLM, or enterprise LLM gateway.'
+                        : 'Leave blank to use standard official endpoint.'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Model Selection & Discovery */}
@@ -457,7 +483,11 @@ export function AISettingsModal({
 
                   <div className="relative">
                     <select
-                      value={activeConfig.selectedModel}
+                      value={
+                        models.some((m) => m.id === activeConfig.selectedModel)
+                          ? activeConfig.selectedModel
+                          : (models.find((m) => m.is_default)?.id || models[0]?.id || '')
+                      }
                       onChange={(e) => updateActiveConfig({ selectedModel: e.target.value })}
                       className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                     >

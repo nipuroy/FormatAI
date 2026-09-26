@@ -263,3 +263,17 @@ async def test_custom_openai_adapter_execution():
     assert provider.base_url == "http://localhost:11434/v1"
     assert provider.resolve_model() == "llama3:latest"
     assert provider.is_configured() is True
+
+
+def test_foreign_model_resolution_guard():
+    """Verify that passing foreign models (e.g. llama to gemini or gemini to groq) resolves cleanly to defaults."""
+    gemini = GeminiProvider()
+    assert gemini.resolve_model("llama-3.3-70b-versatile") == "gemini-3.8-flash"
+    assert gemini.resolve_model("mistral-large-latest") == "gemini-3.8-flash"
+    assert gemini.resolve_model("gemini-3.1-pro-preview") == "gemini-3.1-pro-preview"
+
+    groq = GroqProvider()
+    assert groq.resolve_model("gemini-3.8-flash") == "llama-3.3-70b-versatile"
+    assert groq.resolve_model("gpt-4o") == "llama-3.3-70b-versatile"
+    assert groq.resolve_model("llama-3.1-8b-instant") == "llama-3.1-8b-instant"
+

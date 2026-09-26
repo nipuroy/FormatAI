@@ -5,6 +5,7 @@ Text Generation WebUI, or private enterprise LLM gateways.
 """
 
 from typing import Any, Dict, List, Optional
+import httpx
 from backend.core.config import get_settings
 from backend.providers.base import BaseAIProvider, ModelInfo, ProviderResult, ProviderValidationResult
 from backend.providers.exceptions import (
@@ -21,7 +22,6 @@ from backend.utils.logger import get_logger
 
 logger = get_logger("custom_openai_provider")
 
-DEFAULT_CUSTOM_BASE_URL = "http://localhost:11434/v1"
 DEFAULT_CUSTOM_MODEL = "llama3"
 
 
@@ -40,13 +40,15 @@ class CustomOpenAIProvider(BaseAIProvider):
     ):
         settings = get_settings()
         resolved_key = api_key if api_key is not None else settings.CUSTOM_OPENAI_API_KEY
-        resolved_base_url = (base_url or settings.CUSTOM_OPENAI_BASE_URL or DEFAULT_CUSTOM_BASE_URL).rstrip("/")
+        # Only use setting if explicitly configured; else default to None or placeholder
+        env_base = settings.CUSTOM_OPENAI_BASE_URL
+        resolved_base_url = (base_url or env_base or "").rstrip("/")
         resolved_model = default_model or DEFAULT_CUSTOM_MODEL
 
         super().__init__(
             api_key=resolved_key,
             default_model=resolved_model,
-            base_url=resolved_base_url,
+            base_url=resolved_base_url or None,
             timeout_seconds=timeout_seconds,
             enabled=enabled,
             max_retries=max_retries,
@@ -60,7 +62,7 @@ class CustomOpenAIProvider(BaseAIProvider):
         return "Custom OpenAI Endpoint"
 
     def is_configured(self) -> bool:
-        """Custom endpoint is considered configured if base_url is specified."""
+        """Custom endpoint is considered configured if a non-empty base_url is specified."""
         return bool(self.base_url and str(self.base_url).strip())
 
     def resolve_model(self, requested_model: Optional[str] = None) -> str:
@@ -78,26 +80,34 @@ class CustomOpenAIProvider(BaseAIProvider):
         return headers
 
     async def list_models(self) -> List[ModelInfo]:
-        """Dynamically discover models hosted on custom endpoint."""
+        """Dynamically discover models hosted on custom endpoint if configured."""
+        curated_defaults = [
+            ModelInfo(
+                id=self.default_model or DEFAULT_CUSTOM_MODEL,
+                name=self.default_model or "Llama 3 (Custom/Ollama)",
+                description=f"Model on {self.base_url or 'http://localhost:11434/v1'}",
+                is_default=True,
+            ),
+            ModelInfo(
+                id="mistral",
+                name="Mistral 7B (Custom)",
+                description="Mistral model via local inference endpoint",
+            ),
+        ]
+
         if not self.is_configured():
-            return [
-                ModelInfo(
-                    id=self.default_model or DEFAULT_CUSTOM_MODEL,
-                    name=self.default_model or DEFAULT_CUSTOM_MODEL,
-                    description="Default custom endpoint model",
-                    is_default=True,
-                )
-            ]
+            return curated_defaults
 
         try:
             url = f"{self.base_url}/models"
+            # Fast probe (1.0s, no retries) so offline local servers don't hang or spam warnings
             resp = await execute_with_retry(
                 provider_name=self.get_provider_name(),
                 method="GET",
                 url=url,
                 headers=self._get_headers(),
-                timeout=10.0,
-                max_retries=1,
+                timeout=1.0,
+                max_retries=0,
             )
             data = resp.json()
             models: List[ModelInfo] = []
@@ -114,25 +124,18 @@ class CustomOpenAIProvider(BaseAIProvider):
                     )
             if models:
                 return models
-        except Exception as exc:
-            logger.warning(f"Custom OpenAI model discovery: {str(exc)}")
+        except Exception:
+            # Silent fallback: local server is simply not currently running
+            pass
 
-        # Fallback to configured default
-        return [
-            ModelInfo(
-                id=self.default_model or DEFAULT_CUSTOM_MODEL,
-                name=self.default_model or DEFAULT_CUSTOM_MODEL,
-                description=f"Configured model on {self.base_url}",
-                is_default=True,
-            )
-        ]
+        return curated_defaults
 
     async def validate_configuration(self) -> ProviderValidationResult:
         if not self.is_configured():
             return ProviderValidationResult(
                 valid=False,
                 provider=self.get_provider_name(),
-                message="Base URL is not specified for custom OpenAI endpoint.",
+                message="Base URL is not specified. Please enter your endpoint URL (e.g. http://localhost:11434/v1).",
             )
 
         try:
@@ -142,7 +145,7 @@ class CustomOpenAIProvider(BaseAIProvider):
                 method="GET",
                 url=url,
                 headers=self._get_headers(),
-                timeout=10.0,
+                timeout=2.0,
                 max_retries=0,
             )
             data = resp.json()
@@ -160,7 +163,7 @@ class CustomOpenAIProvider(BaseAIProvider):
             return ProviderValidationResult(
                 valid=False,
                 provider=self.get_provider_name(),
-                message=norm.message,
+                message=f"Could not connect to {self.base_url}. Ensure your local server is running.",
                 details={"error_type": norm.error_type, "base_url": self.base_url},
             )
 
@@ -173,6 +176,12 @@ class CustomOpenAIProvider(BaseAIProvider):
         **kwargs: Any,
     ) -> ProviderResult:
         self.check_active_or_raise()
+
+        if not self.is_configured():
+            raise ProviderConfigurationError(
+                message="Custom endpoint base URL is not configured. Please specify an endpoint base URL.",
+                provider=self.get_provider_name(),
+            )
 
         if not prompt or not prompt.strip():
             raise ProviderError(

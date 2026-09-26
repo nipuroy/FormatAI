@@ -96,7 +96,13 @@ class OpenAICompatibleProvider(BaseAIProvider):
 
     def resolve_model(self, requested_model: Optional[str] = None) -> str:
         if requested_model and requested_model.strip():
-            return requested_model.strip()
+            clean = requested_model.strip()
+            if any(foreign in clean.lower() for foreign in ["gemini", "claude", "mistral", "command", "llama"]):
+                logger.warning(
+                    f"Model '{clean}' is incompatible with OpenAI. Falling back to default '{self.default_model or DEFAULT_OPENAI_MODEL}'."
+                )
+                return self.default_model or DEFAULT_OPENAI_MODEL
+            return clean
         return self.default_model or DEFAULT_OPENAI_MODEL
 
     def _get_headers(self) -> Dict[str, str]:
