@@ -32,12 +32,23 @@ class Settings(BaseSettings):
 
     # AI Provider API Keys (Read securely from environment / .env, never hardcoded)
     GEMINI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
+    OPENROUTER_API_KEY: Optional[str] = None
+    MISTRAL_API_KEY: Optional[str] = None
+    COHERE_API_KEY: Optional[str] = None
+    HUGGINGFACE_API_KEY: Optional[str] = None
+    HF_TOKEN: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: Optional[str] = "https://api.openai.com/v1"
+    CUSTOM_OPENAI_API_KEY: Optional[str] = None
+    CUSTOM_OPENAI_BASE_URL: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
 
     # Default Provider Settings
     DEFAULT_AI_PROVIDER: str = "gemini"
-    DEFAULT_MODEL_NAME: str = "gemini-2.5-flash"
+    DEFAULT_MODEL_NAME: str = "gemini-3.8-flash"
+    DEFAULT_AI_TIMEOUT_SECONDS: float = 30.0
+    DEFAULT_AI_MAX_RETRIES: int = 2
 
     # Document Export Settings
     DEFAULT_CITATION_STYLE: str = "apa"

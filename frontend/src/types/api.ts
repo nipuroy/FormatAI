@@ -67,8 +67,38 @@ export interface PdfExportRequest {
 export interface AIModelDescriptor {
   id: string;
   name: string;
+  description?: string;
+  tier?: string;
+  context_length?: number;
+  is_default?: boolean;
+}
+
+export interface AIProviderDescriptor {
+  id: string;
+  name: string;
   description: string;
-  tier: string;
+  is_configured: boolean;
+  is_enabled: boolean;
+  default_model?: string;
+  supports_discovery: boolean;
+  requires_base_url: boolean;
+}
+
+export interface ProviderSpecificConfig {
+  api_key?: string;
+  base_url?: string;
+  enabled?: boolean;
+  timeout_seconds?: number;
+  max_retries?: number;
+  default_model?: string;
+}
+
+export interface ProviderValidationResult {
+  valid: boolean;
+  provider: string;
+  message: string;
+  model_count?: number;
+  details?: Record<string, unknown>;
 }
 
 export interface AIModelsResponse {
@@ -80,10 +110,12 @@ export interface AIModelsResponse {
 
 export interface AIGenerateRequest {
   prompt: string;
-  system_instruction?: string;
+  provider?: string;
   model?: string;
   temperature?: number;
-  max_output_tokens?: number;
+  provider_config?: ProviderSpecificConfig;
+  fallback_providers?: string[];
+  timeout?: number;
 }
 
 export interface AIGenerateResponse {
@@ -92,6 +124,9 @@ export interface AIGenerateResponse {
   model: string;
   content: string;
   finish_reason?: string;
+  fallback_occurred?: boolean;
+  attempted_providers?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 export type OperationType =

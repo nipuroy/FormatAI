@@ -4,7 +4,9 @@
  */
 
 import {
+  AIModelDescriptor,
   AIModelsResponse,
+  AIProviderDescriptor,
   AIGenerateRequest,
   AIGenerateResponse,
   ContentAnalysisResponse,
@@ -14,6 +16,7 @@ import {
   FormattingRequestSkeleton,
   HealthCheckResponse,
   PdfExportRequest,
+  ProviderValidationResult,
 } from '../types/api';
 
 /**
@@ -232,19 +235,50 @@ export const apiClient = {
   },
 
   /**
-   * Fetch available Gemini AI models.
+   * Fetch all supported AI providers and their status.
+   */
+  async getSupportedProviders(): Promise<AIProviderDescriptor[]> {
+    return request<AIProviderDescriptor[]>('/api/ai/providers', { method: 'GET' }, 8000);
+  },
+
+  /**
+   * Fetch discovered or curated models for a specific AI provider.
+   */
+  async getProviderModels(providerName: string): Promise<AIModelDescriptor[]> {
+    return request<AIModelDescriptor[]>(`/api/ai/providers/${encodeURIComponent(providerName)}/models`, { method: 'GET' }, 10000);
+  },
+
+  /**
+   * Validate provider credentials and connectivity without running full generation.
+   */
+  async validateProvider(
+    providerName: string,
+    config?: { api_key?: string; base_url?: string; model?: string },
+  ): Promise<ProviderValidationResult> {
+    return request<ProviderValidationResult>(
+      `/api/ai/providers/${encodeURIComponent(providerName)}/validate`,
+      {
+        method: 'POST',
+        body: JSON.stringify(config || {}),
+      },
+      12000,
+    );
+  },
+
+  /**
+   * Fetch available Gemini AI models (legacy/fallback).
    */
   async getAIModels(): Promise<AIModelsResponse> {
     return request<AIModelsResponse>('/api/ai/models', { method: 'GET' }, 8000);
   },
 
   /**
-   * Request AI assistance or synthesis.
+   * Request AI assistance or synthesis across any configured provider.
    */
   async generateAI(params: AIGenerateRequest): Promise<AIGenerateResponse> {
     return request<AIGenerateResponse>('/api/ai/generate', {
       method: 'POST',
       body: JSON.stringify(params),
-    });
+    }, params.timeout ? params.timeout * 1000 : 45000);
   },
 };
