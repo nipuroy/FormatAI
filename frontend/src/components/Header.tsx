@@ -127,27 +127,28 @@ export function Header({
           {/* Backend Health & Latency Indicator */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800 text-xs text-slate-400">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2 h-2 rounded-full transition-colors ${
                 connectionState === 'connected'
                   ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'
                   : connectionState === 'checking'
-                  ? 'bg-amber-400 animate-pulse'
+                  ? 'bg-amber-400'
                   : 'bg-rose-500'
               }`}
             />
-            <span className="hidden sm:inline">
+            <span className="hidden sm:inline font-medium">
               {connectionState === 'connected'
-                ? `FastAPI ${latencyMs !== null ? `(${latencyMs}ms)` : ''}`
+                ? `Core Engine ${latencyMs !== null ? `(${latencyMs}ms)` : ''}`
                 : connectionState === 'checking'
                 ? 'Connecting...'
                 : 'Backend Offline'}
             </span>
             <button
               onClick={onRefreshHealth}
-              className="text-slate-400 hover:text-slate-200 transition-colors p-1"
-              title="Ping Python backend"
+              disabled={connectionState === 'checking'}
+              className="text-slate-400 hover:text-slate-200 transition-colors p-1 disabled:opacity-50 cursor-pointer"
+              title="Ping backend service"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={`w-3 h-3 ${connectionState === 'checking' ? 'animate-spin text-amber-400' : ''}`} />
             </button>
           </div>
         </div>

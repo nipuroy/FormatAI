@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../services/api';
 import { HealthCheckResponse } from '../types/api';
 
@@ -20,11 +20,17 @@ export function useBackendHealth(): UseBackendHealthResult {
   const [lastChecked, setLastChecked] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const checkHealth = useCallback(async () => {
-    setConnectionState((prev) => (prev === 'offline' ? 'checking' : prev));
-    setErrorMessage(null);
-    const start = performance.now();
+  const isCheckingRef = useRef<boolean>(false);
 
+  const performCheck = useCallback(async (isManual: boolean = false) => {
+    if (isCheckingRef.current) return;
+    isCheckingRef.current = true;
+
+    if (isManual) {
+      setConnectionState('checking');
+    }
+
+    const start = performance.now();
     try {
       const data = await apiClient.checkHealth();
       const elapsed = Math.round(performance.now() - start);
@@ -40,18 +46,25 @@ export function useBackendHealth(): UseBackendHealthResult {
       setErrorMessage(msg);
     } finally {
       setLastChecked(new Date().toLocaleTimeString());
+      isCheckingRef.current = false;
     }
   }, []);
 
+  const checkHealth = useCallback(async () => {
+    await performCheck(true);
+  }, [performCheck]);
+
   useEffect(() => {
-    checkHealth();
+    // Initial connection check
+    performCheck(true);
 
-    // Fast retry (3s) while establishing connection; 30s heartbeat when stable
-    const intervalMs = connectionState === 'connected' ? 30000 : 3000;
-    const timer = setTimeout(checkHealth, intervalMs);
+    // Stable background heartbeat without state recursion
+    const interval = setInterval(() => {
+      performCheck(false);
+    }, 15000);
 
-    return () => clearTimeout(timer);
-  }, [checkHealth, connectionState]);
+    return () => clearInterval(interval);
+  }, [performCheck]);
 
   return {
     connectionState,

@@ -82,7 +82,7 @@ export function DocumentFormatterPage() {
           progressPercent={progressPercent}
           workflowSteps={workflowSteps}
           successMessage={successBanner?.message}
-          errorMessage={errorInfo?.message || healthError}
+          errorMessage={errorInfo?.message}
         />
 
         {/* Dismissable Error Notification */}
