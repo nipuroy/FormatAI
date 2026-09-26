@@ -45,10 +45,13 @@ export function useBackendHealth(): UseBackendHealthResult {
 
   useEffect(() => {
     checkHealth();
-    // Heartbeat check every 30 seconds
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
-  }, [checkHealth]);
+
+    // Fast retry (3s) while establishing connection; 30s heartbeat when stable
+    const intervalMs = connectionState === 'connected' ? 30000 : 3000;
+    const timer = setTimeout(checkHealth, intervalMs);
+
+    return () => clearTimeout(timer);
+  }, [checkHealth, connectionState]);
 
   return {
     connectionState,
