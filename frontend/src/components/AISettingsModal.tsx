@@ -25,6 +25,8 @@ import {
   ProviderValidationResult,
   AIGenerateResponse,
 } from '../types/api';
+import { useUserSettings } from '../hooks/useUserSettings';
+import { SupportedProviderId, ProviderLocalSettings } from '../types/userSettings';
 
 interface AISettingsModalProps {
   isOpen: boolean;
@@ -33,36 +35,28 @@ interface AISettingsModalProps {
   onApplyAIText: (newText: string) => void;
 }
 
-interface LocalProviderConfig {
-  apiKey: string;
-  baseUrl: string;
-  enabled: boolean;
-  selectedModel: string;
-  timeoutSeconds: number;
-}
-
-const STORAGE_KEY = 'formatai_provider_configs_v1';
-
 export function AISettingsModal({
   isOpen,
   onClose,
   currentText,
   onApplyAIText,
 }: AISettingsModalProps) {
+  const {
+    settings,
+    updateProviderSettings,
+    updateActiveAI,
+  } = useUserSettings();
+
   // Provider list from backend
   const [providers, setProviders] = useState<AIProviderDescriptor[]>([]);
-  const [selectedProviderId, setSelectedProviderId] = useState<string>('gemini');
+  const selectedProviderId = settings.activeAI.selectedProvider;
 
-  // Client-stored per-provider configs (isolated in localStorage, never sent to shared DB)
-  const [configs, setConfigs] = useState<Record<string, LocalProviderConfig>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return {};
-  });
+  const setSelectedProviderId = useCallback(
+    (id: string) => {
+      updateActiveAI({ selectedProvider: id as SupportedProviderId });
+    },
+    [updateActiveAI]
+  );
 
   // Models for selected provider
   const [models, setModels] = useState<AIModelDescriptor[]>([]);
@@ -73,8 +67,10 @@ export function AISettingsModal({
   const [validationResult, setValidationResult] = useState<ProviderValidationResult | null>(null);
 
   // Generation options
-  const [temperature, setTemperature] = useState<number>(0.2);
-  const [fallbackProviderId, setFallbackProviderId] = useState<string>('');
+  const [temperature, setTemperature] = useState<number>(settings.activeAI.temperature || 0.2);
+  const [fallbackProviderId, setFallbackProviderIdState] = useState<string>(
+    settings.activeAI.fallbackProviders[0] || ''
+  );
   const [prompt, setPrompt] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationResponse, setGenerationResponse] = useState<AIGenerateResponse | null>(null);
@@ -82,44 +78,25 @@ export function AISettingsModal({
   const [copied, setCopied] = useState<boolean>(false);
   const [showKey, setShowKey] = useState<boolean>(false);
 
-  // Active provider config helper
-  const activeConfig: LocalProviderConfig = configs[selectedProviderId] || {
-    apiKey: '',
-    baseUrl: '',
-    enabled: true,
-    selectedModel: '',
-    timeoutSeconds: 30,
+  const setFallbackProviderId = (id: string) => {
+    setFallbackProviderIdState(id);
+    updateActiveAI({
+      fallbackProviders: id ? [id as SupportedProviderId] : [],
+    });
   };
 
-  const updateProviderConfig = useCallback(
-    (providerId: string, updates: Partial<LocalProviderConfig>) => {
-      setConfigs((prev) => {
-        const next = {
-          ...prev,
-          [providerId]: {
-            ...(prev[providerId] || {
-              apiKey: '',
-              baseUrl: '',
-              enabled: true,
-              selectedModel: '',
-              timeoutSeconds: 30,
-            }),
-            ...updates,
-          },
-        };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        } catch {
-          // ignore storage errors
-        }
-        return next;
-      });
-    },
-    []
-  );
+  // Active provider config helper
+  const activeConfig: ProviderLocalSettings =
+    settings.providers[selectedProviderId as SupportedProviderId] || {
+      apiKey: '',
+      baseUrl: '',
+      enabled: true,
+      selectedModel: '',
+      timeoutSeconds: 30,
+    };
 
-  const updateActiveConfig = (updates: Partial<LocalProviderConfig>) => {
-    updateProviderConfig(selectedProviderId, updates);
+  const updateActiveConfig = (updates: Partial<ProviderLocalSettings>) => {
+    updateProviderSettings(selectedProviderId as SupportedProviderId, updates);
   };
 
   // Load supported providers on open
@@ -158,18 +135,21 @@ export function AISettingsModal({
       setModels(result);
 
       // Validate that currently stored model belongs to this provider
-      const storedModel = configs[providerId]?.selectedModel;
+      const storedModel = settings.providers[providerId as SupportedProviderId]?.selectedModel;
       const isValid = result.some((m) => m.id === storedModel);
       if (!isValid && result.length > 0) {
         const def = result.find((m) => m.is_default) || result[0];
-        updateProviderConfig(providerId, { selectedModel: def.id });
+        updateProviderSettings(providerId as SupportedProviderId, { selectedModel: def.id });
+        if (providerId === selectedProviderId) {
+          updateActiveAI({ selectedModel: def.id });
+        }
       }
     } catch {
       setModels([]);
     } finally {
       setIsLoadingModels(false);
     }
-  }, [configs, updateProviderConfig]);
+  }, [settings.providers, selectedProviderId, updateProviderSettings, updateActiveAI]);
 
   useEffect(() => {
     if (isOpen && selectedProviderId) {
@@ -319,7 +299,7 @@ export function AISettingsModal({
             </div>
             {providers.map((p) => {
               const isSelected = p.id === selectedProviderId;
-              const pConfig = configs[p.id];
+              const pConfig = settings.providers[p.id as SupportedProviderId];
               const isEnabled = pConfig?.enabled ?? p.is_enabled;
               const hasCustomKey = Boolean(pConfig?.apiKey);
               const isConfigured = hasCustomKey || p.is_configured || (p.id === 'custom_openai' && Boolean(pConfig?.baseUrl));
@@ -449,12 +429,12 @@ export function AISettingsModal({
                   </label>
                   <input
                     type="text"
-                    value={activeConfig.baseUrl}
+                    value={activeConfig.baseUrl || ''}
                     onChange={(e) => updateActiveConfig({ baseUrl: e.target.value })}
                     placeholder={selectedProviderId === 'custom_openai' ? 'https://xxxx.ngrok-free.app/v1 or http://host:11434/v1' : 'Default API URL'}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
                   />
-                  {selectedProviderId === 'custom_openai' && (activeConfig.baseUrl.includes('localhost') || activeConfig.baseUrl.includes('127.0.0.1')) ? (
+                  {selectedProviderId === 'custom_openai' && activeConfig.baseUrl && (activeConfig.baseUrl.includes('localhost') || activeConfig.baseUrl.includes('127.0.0.1')) ? (
                     <p className="text-[10px] text-amber-700 mt-1 p-1.5 bg-amber-50 rounded border border-amber-200 leading-tight">
                       <strong>Cloud note:</strong> This application runs in the cloud. Accessing a local Ollama or LM Studio model requires a public tunnel (e.g. ngrok or Cloudflare tunnel).
                     </p>
@@ -488,7 +468,10 @@ export function AISettingsModal({
                           ? activeConfig.selectedModel
                           : (models.find((m) => m.is_default)?.id || models[0]?.id || '')
                       }
-                      onChange={(e) => updateActiveConfig({ selectedModel: e.target.value })}
+                      onChange={(e) => {
+                        updateActiveConfig({ selectedModel: e.target.value });
+                        updateActiveAI({ selectedModel: e.target.value });
+                      }}
                       className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                     >
                       {models.length === 0 && (
@@ -518,7 +501,7 @@ export function AISettingsModal({
                   >
                     <option value="">No Fallback (Fail Directly)</option>
                     {providers
-                      .filter((p) => p.id !== selectedProviderId && (configs[p.id]?.enabled ?? p.is_enabled))
+                      .filter((p) => p.id !== selectedProviderId && (settings.providers[p.id as SupportedProviderId]?.enabled ?? p.is_enabled))
                       .map((p) => (
                         <option key={p.id} value={p.id}>
                           Fall back to {p.name}

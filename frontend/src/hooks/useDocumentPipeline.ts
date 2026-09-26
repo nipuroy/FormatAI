@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { apiClient } from '../services/api';
 import { downloadBlob } from '../services/exportService';
 import {
@@ -13,6 +13,7 @@ import {
   WorkflowStep,
 } from '../types/api';
 import { SAMPLE_DOCUMENTS } from '../utils/sampleDocuments';
+import { useUserSettings } from './useUserSettings';
 
 export interface LastExportInfo {
   format: 'docx' | 'pdf';
@@ -29,13 +30,43 @@ export interface PipelineErrorInfo {
 }
 
 export function useDocumentPipeline() {
+  const { settings, updateFormatting } = useUserSettings();
+
   // Input Document State
   const [rawText, setRawText] = useState<string>(SAMPLE_DOCUMENTS[0].content);
   const [title, setTitle] = useState<string>('Quantum Electrodynamics & Vacuum Polarization');
-  const [preset, setPreset] = useState<DocxPreset>('academic');
-  const [citationStyle, setCitationStyle] = useState<CitationStyle>('apa');
-  const [includePageNumbers, setIncludePageNumbers] = useState<boolean>(true);
-  const [includeHeader, setIncludeHeader] = useState<boolean>(true);
+  const [preset, setPresetState] = useState<DocxPreset>(settings.formatting.preset);
+  const [citationStyle, setCitationStyleState] = useState<CitationStyle>(settings.formatting.citationStyle);
+  const [includePageNumbers, setIncludePageNumbersState] = useState<boolean>(settings.formatting.includePageNumbers);
+  const [includeHeader, setIncludeHeaderState] = useState<boolean>(settings.formatting.includeHeader);
+
+  // Sync state if user settings change (e.g. on profile reset or import)
+  useEffect(() => {
+    setPresetState(settings.formatting.preset);
+    setCitationStyleState(settings.formatting.citationStyle);
+    setIncludePageNumbersState(settings.formatting.includePageNumbers);
+    setIncludeHeaderState(settings.formatting.includeHeader);
+  }, [settings.formatting]);
+
+  const setPreset = useCallback((p: DocxPreset) => {
+    setPresetState(p);
+    updateFormatting({ preset: p });
+  }, [updateFormatting]);
+
+  const setCitationStyle = useCallback((c: CitationStyle) => {
+    setCitationStyleState(c);
+    updateFormatting({ citationStyle: c });
+  }, [updateFormatting]);
+
+  const setIncludePageNumbers = useCallback((n: boolean) => {
+    setIncludePageNumbersState(n);
+    updateFormatting({ includePageNumbers: n });
+  }, [updateFormatting]);
+
+  const setIncludeHeader = useCallback((h: boolean) => {
+    setIncludeHeaderState(h);
+    updateFormatting({ includeHeader: h });
+  }, [updateFormatting]);
 
   // Operation and Process State
   const [activeOperation, setActiveOperation] = useState<OperationType>('idle');

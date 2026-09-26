@@ -6,6 +6,7 @@ import {
   Server,
   Trash2,
   BookOpen,
+  Shield,
 } from 'lucide-react';
 import { BackendConnectionState } from '../hooks/useBackendHealth';
 import { SAMPLE_DOCUMENTS } from '../utils/sampleDocuments';
@@ -15,6 +16,7 @@ interface HeaderProps {
   latencyMs: number | null;
   onRefreshHealth: () => void;
   onOpenAISettings: () => void;
+  onOpenUserSettings: () => void;
   onSelectSample: (sampleId: string) => void;
   onClear: () => void;
   activeOperation: string;
@@ -25,6 +27,7 @@ export function Header({
   latencyMs,
   onRefreshHealth,
   onOpenAISettings,
+  onOpenUserSettings,
   onSelectSample,
   onClear,
   activeOperation,
@@ -98,6 +101,16 @@ export function Header({
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>AI Settings</span>
+          </button>
+
+          {/* User Settings & Privacy Isolation Button */}
+          <button
+            onClick={onOpenUserSettings}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
+            title="Client-local preferences, security model, and isolation status"
+          >
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Settings & Privacy</span>
           </button>
 
           {/* Clear Editor */}

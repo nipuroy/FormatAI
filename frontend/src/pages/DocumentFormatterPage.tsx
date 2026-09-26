@@ -10,6 +10,7 @@ import { ProcessingStatus } from '../components/ProcessingStatus';
 import { ErrorNotification } from '../components/ErrorNotification';
 import { DocumentStats } from '../components/DocumentStats';
 import { AISettingsModal } from '../components/AISettingsModal';
+import { UserSettingsModal } from '../components/UserSettingsModal';
 
 export function DocumentFormatterPage() {
   const {
@@ -53,6 +54,7 @@ export function DocumentFormatterPage() {
   } = useDocumentPipeline();
 
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+  const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
   const isBusy = activeOperation !== 'idle';
@@ -65,6 +67,7 @@ export function DocumentFormatterPage() {
         latencyMs={latencyMs}
         onRefreshHealth={checkHealth}
         onOpenAISettings={() => setIsAISettingsOpen(true)}
+        onOpenUserSettings={() => setIsUserSettingsOpen(true)}
         onSelectSample={loadSample}
         onClear={clearEditor}
         activeOperation={activeOperation}
@@ -205,6 +208,13 @@ export function DocumentFormatterPage() {
         onApplyAIText={(newText) => {
           setRawText(newText);
         }}
+      />
+
+      {/* User Settings, Privacy & Client Isolation Modal */}
+      <UserSettingsModal
+        isOpen={isUserSettingsOpen}
+        onClose={() => setIsUserSettingsOpen(false)}
+        onOpenAISettings={() => setIsAISettingsOpen(true)}
       />
     </div>
   );
