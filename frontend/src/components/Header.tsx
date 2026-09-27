@@ -3,10 +3,10 @@ import {
   FileText,
   Sparkles,
   RefreshCw,
-  Server,
   Trash2,
   BookOpen,
   Shield,
+  Zap,
 } from 'lucide-react';
 import { BackendConnectionState } from '../hooks/useBackendHealth';
 import { SAMPLE_DOCUMENTS } from '../utils/sampleDocuments';
@@ -17,6 +17,7 @@ interface HeaderProps {
   onRefreshHealth: () => void;
   onOpenAISettings: () => void;
   onOpenUserSettings: () => void;
+  onOpenSkills?: () => void;
   onSelectSample: (sampleId: string) => void;
   onClear: () => void;
   activeOperation: string;
@@ -28,6 +29,7 @@ export function Header({
   onRefreshHealth,
   onOpenAISettings,
   onOpenUserSettings,
+  onOpenSkills,
   onSelectSample,
   onClear,
   activeOperation,
@@ -93,6 +95,18 @@ export function Header({
             )}
           </div>
 
+          {/* Modular Skills Modal Button */}
+          {onOpenSkills && (
+            <button
+              onClick={onOpenSkills}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer"
+              title="Configure modular document processing skills"
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Skills (10)</span>
+            </button>
+          )}
+
           {/* AI Settings Modal Button */}
           <button
             onClick={onOpenAISettings}
@@ -137,7 +151,7 @@ export function Header({
             />
             <span className="hidden sm:inline font-medium">
               {connectionState === 'connected'
-                ? `Core Engine ${latencyMs !== null ? `(${latencyMs}ms)` : ''}`
+                ? `FastAPI ${latencyMs !== null ? `(${latencyMs}ms)` : ''}`
                 : connectionState === 'checking'
                 ? 'Connecting...'
                 : 'Backend Offline'}
@@ -156,3 +170,4 @@ export function Header({
     </header>
   );
 }
+

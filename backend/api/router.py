@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from backend.api.health import router as health_router
 from backend.api.ai import router as ai_router
 from backend.api.document import router as document_router
+from backend.api.skills import router as skills_router
 
 api_router = APIRouter()
 
@@ -16,3 +17,6 @@ api_router.include_router(ai_router)
 # Mount Document processing and DOCX export routes under /api/documents and /api/document
 api_router.include_router(document_router, prefix="/documents")
 api_router.include_router(document_router, prefix="/document")
+
+# Mount Modular Skills routes under /api/skills
+api_router.include_router(skills_router)

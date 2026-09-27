@@ -4,6 +4,14 @@ Clean, modular architecture orchestrating routes, services, providers,
 models, utilities, and configuration.
 """
 
+import sys
+from pathlib import Path
+
+# Ensure persistent python packages directory is in sys.path
+pkg_dir = Path(__file__).resolve().parent.parent / ".python_packages"
+if pkg_dir.exists() and str(pkg_dir) not in sys.path:
+    sys.path.insert(0, str(pkg_dir))
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.router import api_router

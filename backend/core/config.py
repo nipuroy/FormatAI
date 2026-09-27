@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
 
     # Server Settings
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    HOST: str = "127.0.0.1"
+    PORT: int = 8001
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 

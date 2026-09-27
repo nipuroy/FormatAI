@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/test_frontend_storage_isolation.ts"
+    "test": "tsx tests/test_frontend_storage_isolation.ts && tsx tests/test_skills_architecture.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

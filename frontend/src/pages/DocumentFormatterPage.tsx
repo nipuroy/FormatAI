@@ -11,13 +11,13 @@ import { ErrorNotification } from '../components/ErrorNotification';
 import { DocumentStats } from '../components/DocumentStats';
 import { AISettingsModal } from '../components/AISettingsModal';
 import { UserSettingsModal } from '../components/UserSettingsModal';
+import { SkillsModal } from '../components/SkillsModal';
 
 export function DocumentFormatterPage() {
   const {
     connectionState,
     latencyMs,
     checkHealth,
-    errorMessage: healthError,
   } = useBackendHealth();
 
   const {
@@ -55,6 +55,7 @@ export function DocumentFormatterPage() {
 
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
+  const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
   const isBusy = activeOperation !== 'idle';
@@ -68,6 +69,7 @@ export function DocumentFormatterPage() {
         onRefreshHealth={checkHealth}
         onOpenAISettings={() => setIsAISettingsOpen(true)}
         onOpenUserSettings={() => setIsUserSettingsOpen(true)}
+        onOpenSkills={() => setIsSkillsOpen(true)}
         onSelectSample={loadSample}
         onClear={clearEditor}
         activeOperation={activeOperation}
@@ -215,6 +217,12 @@ export function DocumentFormatterPage() {
         isOpen={isUserSettingsOpen}
         onClose={() => setIsUserSettingsOpen(false)}
         onOpenAISettings={() => setIsAISettingsOpen(true)}
+      />
+
+      {/* Modular Document Skills Management Modal */}
+      <SkillsModal
+        isOpen={isSkillsOpen}
+        onClose={() => setIsSkillsOpen(false)}
       />
     </div>
   );

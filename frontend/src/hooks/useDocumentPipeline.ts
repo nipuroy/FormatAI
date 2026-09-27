@@ -14,6 +14,8 @@ import {
 } from '../types/api';
 import { SAMPLE_DOCUMENTS } from '../utils/sampleDocuments';
 import { useUserSettings } from './useUserSettings';
+import { skillOrchestrator } from '../skills';
+import { SkillExecutionLog } from '../skills/types';
 
 export interface LastExportInfo {
   format: 'docx' | 'pdf';
@@ -77,6 +79,7 @@ export function useDocumentPipeline() {
   const [analysisResult, setAnalysisResult] = useState<ContentAnalysisResponse | null>(null);
   const [cleanResult, setCleanResult] = useState<ContentCleanResponse | null>(null);
   const [structuredDocument, setStructuredDocument] = useState<AcademicDocument | null>(null);
+  const [skillExecutionLogs, setSkillExecutionLogs] = useState<SkillExecutionLog[]>([]);
   const [lastExport, setLastExport] = useState<LastExportInfo | null>(null);
 
   // Status and Error Notifications
@@ -204,8 +207,17 @@ export function useDocumentPipeline() {
     updateStepStatus('format', 'active');
 
     try {
+      // 1. Execute Modular Skills Orchestrator Pipeline
+      const skillResult = skillOrchestrator.process(rawText, {
+        title: title.trim() || undefined,
+        preset,
+        citationStyle,
+      });
+      setSkillExecutionLogs(skillResult.executionLogs);
+
+      // 2. Transmit transformed document to backend
       const res = await apiClient.processDocument({
-        raw_text: rawText,
+        raw_text: skillResult.cleanedText,
         title: title.trim() || undefined,
         citation_style: citationStyle,
         preset,
@@ -274,11 +286,19 @@ export function useDocumentPipeline() {
       setRawText(currentText);
       updateStepStatus('clean', 'completed');
 
-      // Step C: Format
+      // Step C: Format through Skills Orchestrator
       setActiveOperation('formatting');
-      setOperationDescription('Step 3/3: Constructing academic AST, styling headings, tables, and math...');
+      setOperationDescription('Step 3/3: Running modular skills orchestrator & constructing academic AST...');
       setProgressPercent(85);
       updateStepStatus('format', 'active');
+
+      const skillResult = skillOrchestrator.process(currentText, {
+        title: title.trim() || undefined,
+        preset,
+        citationStyle,
+      });
+      setSkillExecutionLogs(skillResult.executionLogs);
+      currentText = skillResult.cleanedText;
 
       const pRes = await apiClient.processDocument({
         raw_text: currentText,
@@ -469,6 +489,7 @@ export function useDocumentPipeline() {
     analysisResult,
     cleanResult,
     structuredDocument,
+    skillExecutionLogs,
     lastExport,
     errorInfo,
     clearError,
