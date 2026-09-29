@@ -39,10 +39,25 @@ export function useBackendHealth(): UseBackendHealthResult {
       setConnectionState('connected');
       setErrorMessage(null);
     } catch (err: unknown) {
+      // If initial check fails, retry once after 1s (for cookie bridge or server startup)
+      if (isManual) {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const retryData = await apiClient.checkHealth();
+          const retryElapsed = Math.round(performance.now() - start);
+          setHealthData(retryData);
+          setLatencyMs(retryElapsed);
+          setConnectionState('connected');
+          setErrorMessage(null);
+          return;
+        } catch {
+          // fall through to offline
+        }
+      }
       setConnectionState('offline');
       setHealthData(null);
       setLatencyMs(null);
-      const msg = err instanceof Error ? err.message : 'FastAPI backend is unreachable.';
+      const msg = err instanceof Error ? err.message : 'Backend is unreachable.';
       setErrorMessage(msg);
     } finally {
       setLastChecked(new Date().toLocaleTimeString());

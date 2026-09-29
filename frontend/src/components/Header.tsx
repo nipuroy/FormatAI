@@ -129,9 +129,9 @@ export function Header({
                   : 'bg-rose-500'
               }`}
             />
-            <span className="hidden sm:inline font-mono">
+            <span className="font-mono text-[10px] sm:text-[11px]">
               {connectionState === 'connected'
-                ? `FastAPI${latencyMs !== null ? ` · ${latencyMs}ms` : ''}`
+                ? `Active${latencyMs !== null ? ` · ${latencyMs}ms` : ''}`
                 : connectionState === 'checking'
                 ? 'Connecting...'
                 : 'Offline'}

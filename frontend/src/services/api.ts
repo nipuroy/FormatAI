@@ -65,26 +65,35 @@ async function request<T>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     });
+
+    const contentType = response.headers.get('content-type') || '';
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       let errorDetails: unknown = null;
-      try {
-        const errorJson = await response.json();
-        errorDetails = errorJson;
-        if (errorJson.detail) {
-          errorMessage = typeof errorJson.detail === 'string'
-            ? errorJson.detail
-            : JSON.stringify(errorJson.detail);
-        } else if (errorJson.error) {
-          errorMessage = errorJson.error;
+      if (contentType.includes('application/json')) {
+        try {
+          const errorJson = await response.json();
+          errorDetails = errorJson;
+          if (errorJson.detail) {
+            errorMessage = typeof errorJson.detail === 'string'
+              ? errorJson.detail
+              : JSON.stringify(errorJson.detail);
+          } else if (errorJson.error) {
+            errorMessage = errorJson.error;
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // Fall back to HTTP status message if non-JSON body
       }
       throw new ApiError(errorMessage, response.status, errorDetails);
+    }
+
+    if (contentType.includes('text/html')) {
+      throw new ApiError('Received unexpected HTML response from server.', response.status);
     }
 
     return (await response.json()) as T;
@@ -124,6 +133,7 @@ async function requestBlob(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     });
 
