@@ -99,7 +99,7 @@ export function DocumentFormatterPage() {
 
       {/* Main Content Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-3">
-        {/* Processing Status Banner (non-intrusive, only renders when active/notified) */}
+        {/* Processing Status & Always-Visible Workflow Process Flow */}
         <ProcessingStatus
           activeOperation={activeOperation}
           operationDescription={operationDescription}
@@ -109,6 +109,12 @@ export function DocumentFormatterPage() {
           errorMessage={errorInfo?.message}
           onDismissSuccess={clearSuccess}
           onDismissError={clearError}
+          onStepClick={(stepId) => {
+            if (stepId === 'analyze') analyzeContent();
+            else if (stepId === 'clean') cleanContent();
+            else if (stepId === 'format') formatDocument();
+            else if (stepId === 'export') exportDocx();
+          }}
         />
 
         {/* Dismissable Error Notification */}
