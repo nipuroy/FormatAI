@@ -22,12 +22,28 @@ def estimate_word_count(text: str) -> int:
 
 
 def sanitize_filename(filename: Optional[str], default_name: str = "formatted_document") -> str:
-    """Sanitize user-provided filename for safe filesystem export."""
+    """Sanitize user-provided filename for safe filesystem export and HTTP header safety.
+    
+    Guarantees:
+    - No path traversal characters (no '..', '/', '\\')
+    - No control characters, null bytes, or CRLF (prevents HTTP header injection)
+    - No unescaped quotes or semicolons (prevents Content-Disposition tampering)
+    - Strictly limits character set to safe alphanumeric, underscores, and hyphens
+    """
     if not filename or not filename.strip():
         return default_name
 
-    # Remove invalid characters
-    sanitized = re.sub(r'[\\/*?:"<>|]', "", filename.strip())
-    # Replace spaces with underscores
-    sanitized = re.sub(r"\s+", "_", sanitized)
+    # 1. Strip control characters, CRLF, and null bytes
+    sanitized = re.sub(r"[\x00-\x1f\x7f\r\n]", "", filename.strip())
+    # 2. Remove directory traversal sequences and slashes
+    sanitized = sanitized.replace("..", "").replace("/", "").replace("\\", "")
+    # 3. Remove quotes, semicolons, and dangerous header punctuation
+    sanitized = re.sub(r'[\'"`:;*?<>|]', "", sanitized)
+    # 4. Replace whitespace and commas with underscores
+    sanitized = re.sub(r"[\s,]+", "_", sanitized)
+    # 5. Allow only safe characters: letters, numbers, hyphens, and underscores
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", sanitized)
+    # 6. Trim leading/trailing dots and hyphens
+    sanitized = sanitized.strip(".-_")
+    
     return sanitized[:64] or default_name

@@ -107,10 +107,10 @@ class AcademicDocument(BaseModel):
 class FormattingRequestSkeleton(BaseModel):
     """Request schema for document processing and formatting."""
 
-    raw_text: str = Field(..., min_length=1, description="Raw unformatted text from user or AI engines")
+    raw_text: str = Field(..., min_length=1, max_length=5_000_000, description="Raw unformatted text from user or AI engines")
     citation_style: CitationStyle = Field(default=CitationStyle.APA, description="Target citation style")
     export_format: DocumentFormat = Field(default=DocumentFormat.DOCX, description="Target export format")
-    title: Optional[str] = Field(default=None, description="Optional explicit document title")
+    title: Optional[str] = None
     include_table_of_contents: bool = Field(default=True, description="Whether to generate a table of contents")
 
 
@@ -126,7 +126,7 @@ class DocxExportRequest(BaseModel):
     """Payload schema for requesting a professional DOCX export."""
 
     document: Optional[AcademicDocument] = Field(default=None, description="Pre-structured AcademicDocument AST")
-    raw_text: Optional[str] = Field(default=None, description="Raw unformatted text to parse and convert on-the-fly")
+    raw_text: Optional[str] = Field(default=None, max_length=5_000_000, description="Raw unformatted text to parse and convert on-the-fly")
     preset: Optional[str] = Field(default="academic", description="Layout preset: academic, research_paper, exam, study_notes, textbook")
     title: Optional[str] = Field(default=None, description="Document title override")
     citation_style: Optional[CitationStyle] = Field(default=CitationStyle.APA, description="Citation style standard")
@@ -138,7 +138,7 @@ class PdfExportRequest(BaseModel):
     """Payload schema for requesting a professional PDF export."""
 
     document: Optional[AcademicDocument] = Field(default=None, description="Pre-structured AcademicDocument AST")
-    raw_text: Optional[str] = Field(default=None, description="Raw unformatted text to parse and convert on-the-fly")
+    raw_text: Optional[str] = Field(default=None, max_length=5_000_000, description="Raw unformatted text to parse and convert on-the-fly")
     preset: Optional[str] = Field(default="academic", description="Layout preset: academic, research_paper, exam, study_notes, textbook")
     title: Optional[str] = Field(default=None, description="Document title override")
     citation_style: Optional[CitationStyle] = Field(default=CitationStyle.APA, description="Citation style standard")
@@ -149,7 +149,7 @@ class PdfExportRequest(BaseModel):
 class ContentAnalysisRequest(BaseModel):
     """Payload schema for analyzing unformatted document text."""
 
-    raw_text: str = Field(..., description="Raw academic text to analyze")
+    raw_text: str = Field(..., max_length=5_000_000, description="Raw academic text to analyze")
 
 
 class ContentAnalysisResponse(BaseModel):
@@ -172,7 +172,7 @@ class ContentAnalysisResponse(BaseModel):
 class ContentCleanRequest(BaseModel):
     """Payload schema for cleaning conversational AI artifacts and noise."""
 
-    raw_text: str = Field(..., description="Raw academic text with potential AI conversational noise")
+    raw_text: str = Field(..., max_length=5_000_000, description="Raw academic text with potential AI conversational noise")
 
 
 class ContentCleanResponse(BaseModel):

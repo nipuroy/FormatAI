@@ -18,7 +18,7 @@ class ProviderSpecificConfig(BaseModel):
 class AIGenerateRequest(BaseModel):
     """Payload for text generation requests."""
 
-    prompt: str = Field(..., min_length=1, description="Prompt text to submit to the AI provider")
+    prompt: str = Field(..., min_length=1, max_length=200_000, description="Prompt text to submit to the AI provider (max 200k chars)")
     provider: Optional[str] = Field(default=None, description="Target AI provider (e.g. 'gemini', 'groq', 'openrouter')")
     model: Optional[str] = Field(default=None, description="Optional target model override")
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="Sampling temperature")

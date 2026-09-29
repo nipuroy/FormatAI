@@ -24,11 +24,15 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 
-    # CORS Configuration
-    CORS_ORIGINS: List[str] = ["*"]
-    CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: List[str] = ["*"]
-    CORS_ALLOW_HEADERS: List[str] = ["*"]
+    # CORS Configuration - Strict and secure defaults
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:3000",
+    ]
+    CORS_ALLOW_CREDENTIALS: bool = False
+    CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    CORS_ALLOW_HEADERS: List[str] = ["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin"]
 
     # AI Provider API Keys (Read securely from environment / .env, never hardcoded)
     GEMINI_API_KEY: Optional[str] = None

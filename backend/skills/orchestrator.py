@@ -22,10 +22,13 @@ class SkillOrchestrator:
         title: Optional[str] = None,
         preset: str = "academic",
         citation_style: str = "apa",
+        skill_states: Optional[Dict[str, bool]] = None,
     ) -> Dict[str, Any]:
         """Execute all enabled skills in priority order.
 
-        STRICT GUARANTEE: Disabled skills are bypassed and do not alter the document.
+        STRICT GUARANTEE:
+        - Disabled skills are bypassed and do not alter the document.
+        - When skill_states is provided, it isolates execution per-request without mutating global state.
         """
         start_time = time.perf_counter()
         context = SkillContext(
@@ -35,7 +38,14 @@ class SkillOrchestrator:
         )
 
         all_skills = self.registry.get_all()
-        enabled_skills = self.registry.get_enabled()
+        if skill_states is not None:
+            enabled_skills = [
+                s for s in all_skills
+                if skill_states.get(s.id, s.enabled)
+            ]
+        else:
+            enabled_skills = self.registry.get_enabled()
+
         disabled_count = len(all_skills) - len(enabled_skills)
 
         current_text = raw_text

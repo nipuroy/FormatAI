@@ -98,10 +98,10 @@ async def get_provider_models(
     try:
         return await service.list_models_for_provider(provider_name)
     except Exception as exc:
-        logger.warning(f"Failed to fetch models for {provider_name}: {str(exc)}")
+        logger.warning(f"Failed to fetch models for {provider_name}: {str(exc)}", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Failed to retrieve models for provider '{provider_name}': {str(exc)}"},
+            content={"error": f"Failed to retrieve models for provider '{provider_name}'. Please verify configuration or connectivity."},
         )
 
 

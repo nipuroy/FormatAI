@@ -58,6 +58,18 @@ export function UserSettingsModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 500 * 1024) {
+      setImportStatus('Settings file too large (max 500 KB).');
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setImportStatus('Invalid file type. Please select a .json settings export.');
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -68,6 +80,9 @@ export function UserSettingsModal({
       } catch (err) {
         setImportStatus(`Import failed: ${err instanceof Error ? err.message : 'Invalid JSON file'}`);
       }
+    };
+    reader.onerror = () => {
+      setImportStatus('Failed to read file from disk.');
     };
     reader.readAsText(file);
     // Reset input

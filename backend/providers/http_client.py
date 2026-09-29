@@ -1,7 +1,9 @@
 """Resilient async HTTP client for AI providers with timeouts and retries."""
 
 import asyncio
+import ipaddress
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 import httpx
 from backend.providers.exceptions import (
     ProviderAPIError,
@@ -15,6 +17,68 @@ from backend.utils.logger import get_logger
 
 logger = get_logger("provider_http")
 
+# Blocked hostnames for Cloud Instance Metadata Service (IMDS) protection
+BLOCKED_HOSTNAMES = {
+    "metadata.google.internal",
+    "metadata.google",
+    "169.254.169.254",
+    "169.254.169.253",
+}
+
+
+def validate_safe_provider_url(url: str, provider_name: str) -> None:
+    """Validate URL to protect against SSRF and cloud metadata exfiltration."""
+    try:
+        parsed = urlparse(url)
+    except Exception as exc:
+        raise ProviderAPIError(
+            message=f"Invalid URL for provider {provider_name}: {exc}",
+            provider=provider_name,
+        )
+
+    scheme = parsed.scheme.lower()
+    if scheme not in ("http", "https"):
+        raise ProviderAPIError(
+            message=f"Disallowed protocol scheme '{scheme}' for provider {provider_name}. Only HTTP and HTTPS are permitted.",
+            provider=provider_name,
+        )
+
+    hostname = (parsed.hostname or "").lower().strip()
+    if not hostname:
+        raise ProviderAPIError(
+            message=f"URL missing hostname for provider {provider_name}.",
+            provider=provider_name,
+        )
+
+    # Check blocked metadata hostnames
+    if hostname in BLOCKED_HOSTNAMES or hostname.endswith(".internal"):
+        raise ProviderAPIError(
+            message=f"Access to metadata service or internal host '{hostname}' is strictly forbidden (SSRF protection).",
+            provider=provider_name,
+        )
+
+    # Check if hostname is an IP address
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_link_local:
+            raise ProviderAPIError(
+                message=f"Access to link-local IP '{hostname}' is forbidden (SSRF protection).",
+                provider=provider_name,
+            )
+        if ip.is_multicast:
+            raise ProviderAPIError(
+                message=f"Access to multicast IP '{hostname}' is forbidden.",
+                provider=provider_name,
+            )
+        if ip.is_reserved:
+            raise ProviderAPIError(
+                message=f"Access to reserved IP '{hostname}' is forbidden.",
+                provider=provider_name,
+            )
+    except ValueError:
+        # Hostname is a standard domain name
+        pass
+
 
 async def execute_with_retry(
     provider_name: str,
@@ -26,6 +90,9 @@ async def execute_with_retry(
     max_retries: int = 2,
 ) -> httpx.Response:
     """Execute an HTTP request with exponential backoff for transient failures."""
+    # Enforce SSRF protection before any network socket is opened
+    validate_safe_provider_url(url, provider_name)
+
     attempt = 0
     backoff = 1.0
 

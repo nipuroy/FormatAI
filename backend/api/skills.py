@@ -41,14 +41,18 @@ class ToggleSkillRequest(BaseModel):
 
 
 class ProcessSkillsRequest(BaseModel):
-    raw_text: str = Field(..., description="Raw academic markdown text to process")
+    raw_text: str = Field(..., max_length=5_000_000, description="Raw academic markdown text to process")
     title: Optional[str] = None
     preset: str = "academic"
     citation_style: str = "apa"
+    skill_states: Optional[Dict[str, bool]] = Field(
+        default=None,
+        description="Per-request skill enabled state overrides for strict cross-user isolation",
+    )
 
 
 class ValidateSkillsRequest(BaseModel):
-    raw_text: str = Field(..., description="Raw academic text to validate")
+    raw_text: str = Field(..., max_length=5_000_000, description="Raw academic text to validate")
     skill_ids: Optional[List[str]] = None
 
 
@@ -120,6 +124,7 @@ def process_document(request: ProcessSkillsRequest) -> Dict[str, Any]:
         title=request.title,
         preset=request.preset,
         citation_style=request.citation_style,
+        skill_states=request.skill_states,
     )
     return result
 

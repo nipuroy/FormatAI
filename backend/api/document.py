@@ -243,10 +243,10 @@ def export_docx(
             detail=str(ve),
         )
     except Exception as exc:
-        logger.error(f"Failed to generate DOCX file: {str(exc)}")
+        logger.error(f"Failed to generate DOCX file: {str(exc)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate DOCX document: {str(exc)}",
+            detail="Failed to generate DOCX document. Please verify document formatting or try again.",
         )
 
 
@@ -316,8 +316,8 @@ def export_pdf(
             detail=str(ve),
         )
     except Exception as exc:
-        logger.error(f"Failed to generate PDF file: {str(exc)}")
+        logger.error(f"Failed to generate PDF file: {str(exc)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate PDF document: {str(exc)}",
+            detail="Failed to generate PDF document. Please verify document formatting or try again.",
         )
