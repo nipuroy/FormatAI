@@ -7,7 +7,6 @@ coverage/
 .npm
 
 # Python
-.python_packages/
 __pycache__/
 *.py[cod]
 *$py.class
