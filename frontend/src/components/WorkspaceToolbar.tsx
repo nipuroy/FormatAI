@@ -16,6 +16,7 @@ import {
   Quote,
   SlidersHorizontal,
   Info,
+  HelpCircle,
 } from 'lucide-react';
 import { CitationStyle, DocxPreset, AcademicDocument } from '../types/document';
 import { OperationType, ContentAnalysisResponse } from '../types/api';
@@ -40,6 +41,7 @@ interface WorkspaceToolbarProps {
   analysis: ContentAnalysisResponse | null;
   rawText: string;
   onOpenDetailsModal?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 const PRESET_OPTIONS: { id: DocxPreset; label: string; shortDesc: string }[] = [
@@ -78,9 +80,9 @@ export function WorkspaceToolbar({
   analysis,
   rawText,
   onOpenDetailsModal,
+  onOpenShortcuts,
 }: WorkspaceToolbarProps) {
   const [presetDropdownOpen, setPresetDropdownOpen] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const presetRef = useRef<HTMLDivElement>(null);
 
   const isBusy = activeOperation !== 'idle';
@@ -105,12 +107,12 @@ export function WorkspaceToolbar({
   }, []);
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-sm flex flex-col gap-2.5">
-      {/* Top Row: Document Title + Formatting Configurations + Pipeline Steps */}
+    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3.5 shadow-sm flex flex-col gap-2.5">
+      {/* Top Controls Row */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
         {/* Document Title Input */}
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <div className="p-1 rounded bg-slate-800 text-slate-400 shrink-0">
+          <div className="p-1.5 rounded-lg bg-slate-800 text-slate-400 shrink-0">
             <Heading className="w-3.5 h-3.5 text-indigo-400" />
           </div>
           <div className="flex-1 min-w-0">
@@ -119,7 +121,7 @@ export function WorkspaceToolbar({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="Autodetected from first heading if empty..."
-              className="w-full bg-slate-950/60 hover:bg-slate-950 focus:bg-slate-950 text-xs font-medium text-slate-100 placeholder:text-slate-500 px-2.5 py-1.5 rounded-md border border-slate-800 focus:border-indigo-500/60 focus:outline-none transition-colors"
+              className="w-full bg-slate-950/60 hover:bg-slate-950 focus:bg-slate-950 text-xs font-medium text-slate-100 placeholder:text-slate-500 px-3 py-1.5 min-h-[36px] rounded-lg border border-slate-800 focus:border-indigo-500/60 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -132,18 +134,18 @@ export function WorkspaceToolbar({
               type="button"
               onClick={() => setPresetDropdownOpen(!presetDropdownOpen)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-200 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 rounded-md transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] text-xs font-medium text-slate-200 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors cursor-pointer touch-manipulation"
               title="Select document styling preset"
             >
-              <LayoutTemplate className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{activePresetItem.label}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <LayoutTemplate className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span className="whitespace-nowrap">{activePresetItem.label}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
             </button>
 
             {presetDropdownOpen && (
-              <div className="absolute left-0 lg:right-0 lg:left-auto mt-1 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl p-1 z-50">
+              <div className="absolute left-0 lg:right-0 lg:left-auto mt-1 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50">
                 <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 border-b border-slate-800 mb-1">
-                  Typesetting Preset
+                  Manuscript Typesetting Presets
                 </div>
                 {PRESET_OPTIONS.map((item) => (
                   <button
@@ -153,13 +155,13 @@ export function WorkspaceToolbar({
                       onPresetChange(item.id);
                       setPresetDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-2.5 py-1.5 text-xs rounded transition-colors flex flex-col gap-0.5 cursor-pointer ${
+                    className={`w-full text-left px-2.5 py-2 text-xs rounded-lg transition-colors flex flex-col gap-0.5 cursor-pointer ${
                       preset === item.id
-                        ? 'bg-indigo-950/60 text-indigo-200 font-semibold'
+                        ? 'bg-indigo-950/80 text-indigo-200 font-semibold border border-indigo-500/40'
                         : 'text-slate-300 hover:bg-slate-800'
                     }`}
                   >
-                    <span>{item.label}</span>
+                    <span className="font-medium">{item.label}</span>
                     <span className="text-[10px] text-slate-400">{item.shortDesc}</span>
                   </button>
                 ))}
@@ -168,8 +170,8 @@ export function WorkspaceToolbar({
           </div>
 
           {/* Citation Style Selector */}
-          <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-800 rounded-md px-2 py-1">
-            <Bookmark className="w-3 h-3 text-slate-400" />
+          <div className="flex items-center gap-1.5 bg-slate-950/70 border border-slate-800 rounded-lg px-2.5 py-1 min-h-[36px]">
+            <Bookmark className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
               value={citationStyle}
               onChange={(e) => onCitationStyleChange(e.target.value as CitationStyle)}
@@ -186,11 +188,11 @@ export function WorkspaceToolbar({
           </div>
 
           {/* Running Header & Page Number Toggles */}
-          <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-800 rounded-md p-0.5">
+          <div className="flex items-center gap-1 bg-slate-950/70 border border-slate-800 rounded-lg p-0.5 min-h-[36px]">
             <button
               type="button"
               onClick={() => onTogglePageNumbers(!includePageNumbers)}
-              className={`px-2 py-1 text-[11px] font-medium rounded transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer touch-manipulation ${
                 includePageNumbers
                   ? 'bg-slate-800 text-indigo-300 font-semibold shadow-xs'
                   : 'text-slate-500 hover:text-slate-300'
@@ -202,7 +204,7 @@ export function WorkspaceToolbar({
             <button
               type="button"
               onClick={() => onToggleHeader(!includeHeader)}
-              className={`px-2 py-1 text-[11px] font-medium rounded transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer touch-manipulation ${
                 includeHeader
                   ? 'bg-slate-800 text-indigo-300 font-semibold shadow-xs'
                   : 'text-slate-500 hover:text-slate-300'
@@ -213,13 +215,13 @@ export function WorkspaceToolbar({
             </button>
           </div>
 
-          {/* Quick Step Buttons */}
-          <div className="flex items-center gap-1 pl-1 border-l border-slate-800">
+          {/* Quick Step Buttons (Tablet & Desktop) */}
+          <div className="hidden sm:flex items-center gap-1 pl-1 border-l border-slate-800">
             <button
               type="button"
               onClick={onAnalyze}
               disabled={isBusy || !hasContent}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
               title="Scan text structure and count elements"
             >
               <Search className="w-3 h-3 text-sky-400" />
@@ -230,7 +232,7 @@ export function WorkspaceToolbar({
               type="button"
               onClick={onClean}
               disabled={isBusy || !hasContent}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
               title="Remove AI conversational chatter and prefixes"
             >
               <Sparkles className="w-3 h-3 text-emerald-400" />
@@ -241,8 +243,8 @@ export function WorkspaceToolbar({
               type="button"
               onClick={onFormat}
               disabled={isBusy || !hasContent}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-indigo-200 hover:text-white bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/50 rounded transition-colors disabled:opacity-50 cursor-pointer font-medium"
-              title="Format directly into academic AST structure"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] text-xs text-indigo-200 hover:text-white bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer font-medium touch-manipulation"
+              title="Format directly into academic AST structure (Ctrl+Shift+F)"
             >
               <CheckCircle2 className="w-3 h-3 text-indigo-400" />
               <span>Format</span>
@@ -251,56 +253,71 @@ export function WorkspaceToolbar({
         </div>
       </div>
 
-      {/* Bottom Row: Unboxed Document Metadata Strip */}
-      <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1 pt-1.5 border-t border-slate-800/80 text-[11px] text-slate-400 font-mono">
-        <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
-          <span className="flex items-center gap-1">
+      {/* Bottom Row: Unboxed Document Metadata Strip with Smooth Horizontal Scroll on Mobile */}
+      <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1.5 pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 font-mono">
+        <div className="flex items-center gap-x-3 gap-y-1 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+          <span className="flex items-center gap-1 shrink-0">
             <FileText className="w-3 h-3 text-indigo-400" />
             <strong className="text-slate-200 font-medium">{words.toLocaleString()}</strong> words
           </span>
-          <span className="text-slate-700" aria-hidden="true">·</span>
-          <span>{chars.toLocaleString()} characters</span>
-          <span className="text-slate-700" aria-hidden="true">·</span>
-          <span className="flex items-center gap-1">
+          <span className="text-slate-700 shrink-0" aria-hidden="true">·</span>
+          <span className="shrink-0">{chars.toLocaleString()} characters</span>
+          <span className="text-slate-700 shrink-0" aria-hidden="true">·</span>
+          <span className="flex items-center gap-1 shrink-0">
             <BookOpen className="w-3 h-3 text-sky-400" />
             <strong className="text-slate-200 font-medium">{pages}</strong> {pages === 1 ? 'page' : 'pages'}
           </span>
           {mathCount > 0 && (
             <>
-              <span className="text-slate-700" aria-hidden="true">·</span>
-              <span className="flex items-center gap-1 text-emerald-300 font-medium">
+              <span className="text-slate-700 shrink-0" aria-hidden="true">·</span>
+              <span className="flex items-center gap-1 text-emerald-300 font-medium shrink-0">
                 <Sigma className="w-3 h-3 text-emerald-400" />
-                {mathCount} math formulas
+                {mathCount} formulas
               </span>
             </>
           )}
           {citationsCount > 0 && (
             <>
-              <span className="text-slate-700" aria-hidden="true">·</span>
-              <span className="flex items-center gap-1 text-purple-300 font-medium">
+              <span className="text-slate-700 shrink-0" aria-hidden="true">·</span>
+              <span className="flex items-center gap-1 text-purple-300 font-medium shrink-0">
                 <Quote className="w-3 h-3 text-purple-400" />
                 {citationsCount} citations
               </span>
             </>
           )}
-          <span className="text-slate-700" aria-hidden="true">·</span>
-          <span className="flex items-center gap-1">
+          <span className="text-slate-700 shrink-0" aria-hidden="true">·</span>
+          <span className="flex items-center gap-1 shrink-0">
             <Clock className="w-3 h-3 text-slate-500" />
             {readTime} min read
           </span>
         </div>
 
-        {onOpenDetailsModal && (
-          <button
-            type="button"
-            onClick={onOpenDetailsModal}
-            className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer ml-auto"
-            title="View detailed formatting rules & options"
-          >
-            <SlidersHorizontal className="w-3 h-3" />
-            <span>Options</span>
-          </button>
-        )}
+        {/* Quick Guide and Detailed Options Buttons */}
+        <div className="flex items-center gap-2 ml-auto shrink-0">
+          {onOpenShortcuts && (
+            <button
+              type="button"
+              onClick={onOpenShortcuts}
+              className="flex items-center gap-1 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer touch-manipulation"
+              title="View keyboard shortcuts and pipeline guide"
+            >
+              <HelpCircle className="w-3 h-3" />
+              <span className="hidden xs:inline">Shortcuts</span>
+            </button>
+          )}
+
+          {onOpenDetailsModal && (
+            <button
+              type="button"
+              onClick={onOpenDetailsModal}
+              className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer touch-manipulation"
+              title="View detailed formatting rules & options"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>Options</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

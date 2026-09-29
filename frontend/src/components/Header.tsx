@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Loader2,
   SlidersHorizontal,
+  HelpCircle,
+  MoreVertical,
 } from 'lucide-react';
 import { BackendConnectionState } from '../hooks/useBackendHealth';
 import { SAMPLE_DOCUMENTS } from '../utils/sampleDocuments';
@@ -30,6 +32,7 @@ interface HeaderProps {
   onOpenAISettings: () => void;
   onOpenUserSettings: () => void;
   onOpenSkills?: () => void;
+  onOpenShortcuts?: () => void;
   onSelectSample: (sampleId: string) => void;
   onClear: () => void;
   activeOperation: OperationType | string;
@@ -51,6 +54,7 @@ export function Header({
   onOpenAISettings,
   onOpenUserSettings,
   onOpenSkills,
+  onOpenShortcuts,
   onSelectSample,
   onClear,
   activeOperation,
@@ -66,8 +70,10 @@ export function Header({
 }: HeaderProps) {
   const [sampleMenuOpen, setSampleMenuOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sampleRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const isBusy = activeOperation !== 'idle';
   const isExportingDocx = activeOperation === 'exporting_docx';
@@ -82,18 +88,21 @@ export function Header({
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
         setExportMenuOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.document.addEventListener('mousedown', handleClickOutside);
+    return () => window.document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
     <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-2.5 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
         {/* Zone 1: Single text element wordmark + clean health indicator */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
               <FileText className="w-4 h-4" />
             </div>
             <a
@@ -108,7 +117,7 @@ export function Header({
           {/* Backend Connection Indicator (Discrete, unboxed text with status dot) */}
           <button
             onClick={onRefreshHealth}
-            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer touch-manipulation"
             title="Click to re-verify FastAPI connection"
           >
             <span
@@ -120,7 +129,7 @@ export function Header({
                   : 'bg-rose-500'
               }`}
             />
-            <span className="hidden md:inline font-mono">
+            <span className="hidden sm:inline font-mono">
               {connectionState === 'connected'
                 ? `FastAPI${latencyMs !== null ? ` · ${latencyMs}ms` : ''}`
                 : connectionState === 'checking'
@@ -135,7 +144,7 @@ export function Header({
           </button>
         </div>
 
-        {/* Zone 2: Viewport Mode Switcher & Quick Navigation */}
+        {/* Zone 2: Viewport Mode Switcher & Quick Navigation (Desktop) */}
         <div className="hidden lg:flex items-center gap-1 p-0.5 bg-slate-950/70 border border-slate-800 rounded-lg">
           <button
             type="button"
@@ -181,16 +190,16 @@ export function Header({
         </div>
 
         {/* Zone 3: Primary Actions & Utility Group */}
-        <div className="flex items-center gap-2">
-          {/* Sample Picker Dropdown */}
-          <div className="relative" ref={sampleRef}>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Sample Picker Dropdown (Tablet & Desktop) */}
+          <div className="relative hidden md:block" ref={sampleRef}>
             <button
               onClick={() => setSampleMenuOpen(!sampleMenuOpen)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-md transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-md transition-colors cursor-pointer touch-manipulation"
               title="Load pre-built academic sample documents"
             >
               <BookOpen className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span className="hidden sm:inline">Samples</span>
+              <span>Samples</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
 
@@ -223,7 +232,7 @@ export function Header({
                 type="button"
                 onClick={() => setExportMenuOpen(!exportMenuOpen)}
                 disabled={isBusy || !hasContent}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors disabled:opacity-50 cursor-pointer touch-manipulation"
                 title="Download document as Word DOCX or PDF"
               >
                 {isExportingDocx || isExportingPdf ? (
@@ -231,7 +240,7 @@ export function Header({
                 ) : (
                   <Download className="w-3.5 h-3.5 text-sky-400" />
                 )}
-                <span>Export</span>
+                <span className="hidden xs:inline">Export</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
@@ -250,7 +259,7 @@ export function Header({
                     className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-slate-200 hover:bg-slate-800 rounded-md transition-colors cursor-pointer text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+                      <FileSpreadsheet className="w-4 h-4 text-blue-400 shrink-0" />
                       <div>
                         <div className="font-medium text-slate-100">Microsoft Word</div>
                         <div className="text-[10px] text-slate-400">.docx with equations & styles</div>
@@ -268,7 +277,7 @@ export function Header({
                     className="w-full flex items-center justify-between px-2.5 py-2 text-xs text-slate-200 hover:bg-slate-800 rounded-md transition-colors cursor-pointer text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <FileDown className="w-4 h-4 text-rose-400" />
+                      <FileDown className="w-4 h-4 text-rose-400 shrink-0" />
                       <div>
                         <div className="font-medium text-slate-100">PDF Document</div>
                         <div className="text-[10px] text-slate-400">ReportLab compiled print PDF</div>
@@ -294,21 +303,20 @@ export function Header({
             <button
               onClick={onRunPipeline}
               disabled={isBusy || !hasContent}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
-              title="Run complete pipeline: Analyze → Clean → Format in one step"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap touch-manipulation"
+              title="Run complete pipeline: Analyze → Clean → Format in one step (Ctrl+Enter)"
             >
               {isBusy ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Zap className="w-3.5 h-3.5 fill-current text-indigo-200" />
               )}
-              <span className="hidden sm:inline">Run Pipeline</span>
-              <span className="sm:hidden">Run</span>
+              <span>Run Pipeline</span>
             </button>
           )}
 
-          {/* Utility Tools Group */}
-          <div className="flex items-center gap-1 pl-1 border-l border-slate-800">
+          {/* Desktop Utility Tools Group */}
+          <div className="hidden md:flex items-center gap-1 pl-1 border-l border-slate-800">
             {/* Skills Modal Button with badge */}
             {onOpenSkills && (
               <button
@@ -343,6 +351,17 @@ export function Header({
               <Shield className="w-4 h-4" />
             </button>
 
+            {/* Shortcuts & Quick Guide Button */}
+            {onOpenShortcuts && (
+              <button
+                onClick={onOpenShortcuts}
+                className="p-1.5 text-slate-400 hover:text-sky-300 hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                title="Keyboard shortcuts & formatting guide (Ctrl+/)"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Clear Editor */}
             <button
               onClick={onClear}
@@ -352,6 +371,115 @@ export function Header({
             >
               <Trash2 className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Mobile Overflow Menu Button (Smartphones < md) */}
+          <div className="relative md:hidden" ref={mobileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition-colors cursor-pointer touch-manipulation"
+              title="More options and settings"
+              aria-label="More options"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {mobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 text-xs">
+                <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 mb-1">
+                  Actions & Settings
+                </div>
+
+                {/* Samples Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setSampleMenuOpen(true);
+                  }}
+                  className="flex items-center gap-2.5 px-2.5 py-2 text-slate-200 hover:bg-slate-800 rounded-md text-left cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4 text-indigo-400" />
+                  <span>Load Sample Draft</span>
+                </button>
+
+                {/* Skills Option */}
+                {onOpenSkills && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenSkills();
+                    }}
+                    className="flex items-center justify-between px-2.5 py-2 text-slate-200 hover:bg-slate-800 rounded-md text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Zap className="w-4 h-4 text-emerald-400" />
+                      <span>Modular Skills</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">
+                      {enabledSkillsCount}
+                    </span>
+                  </button>
+                )}
+
+                {/* AI Settings Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenAISettings();
+                  }}
+                  className="flex items-center gap-2.5 px-2.5 py-2 text-slate-200 hover:bg-slate-800 rounded-md text-left cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>AI Assistance & Model</span>
+                </button>
+
+                {/* Privacy Option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenUserSettings();
+                  }}
+                  className="flex items-center gap-2.5 px-2.5 py-2 text-slate-200 hover:bg-slate-800 rounded-md text-left cursor-pointer"
+                >
+                  <Shield className="w-4 h-4 text-indigo-400" />
+                  <span>Settings & Privacy</span>
+                </button>
+
+                {/* Shortcuts & Guide Option */}
+                {onOpenShortcuts && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenShortcuts();
+                    }}
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-slate-200 hover:bg-slate-800 rounded-md text-left cursor-pointer"
+                  >
+                    <HelpCircle className="w-4 h-4 text-sky-400" />
+                    <span>Guide & Shortcuts</span>
+                  </button>
+                )}
+
+                {/* Clear Option */}
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onClear();
+                  }}
+                  className="flex items-center gap-2.5 px-2.5 py-2 text-rose-300 hover:bg-rose-950/40 rounded-md text-left cursor-pointer border-t border-slate-800/80 mt-1"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400" />
+                  <span>Clear Editor</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

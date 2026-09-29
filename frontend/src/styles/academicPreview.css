@@ -20,8 +20,9 @@
 
 @media (max-width: 640px) {
   .academic-paper-sheet {
-    padding: 28px 24px;
-    font-size: 14px;
+    padding: 20px 16px;
+    font-size: 13.5px;
+    min-height: auto;
   }
 }
 
